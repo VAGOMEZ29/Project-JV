@@ -10,8 +10,7 @@ public class Jugador {
     private long tiempoJugado; // en segundos
     private int enemigosVencidos;
     private LocalDateTime fechaUltimoIngreso;
-    private static final DateTimeFormatter DATE_FORMATTER = 
-        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     public Jugador() {
         this.fechaUltimoIngreso = LocalDateTime.now();
@@ -48,7 +47,8 @@ public class Jugador {
     }
 
     public String getFechaUltimoIngresoFormateada() {
-        if (fechaUltimoIngreso == null) return "Nunca";
+        if (fechaUltimoIngreso == null)
+            return "Nunca";
         return fechaUltimoIngreso.format(DATE_FORMATTER);
     }
 

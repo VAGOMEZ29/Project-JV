@@ -1,4 +1,5 @@
 package Modelo;
+
 public class Partida {
     private int puntuacion;
     private int vidas;
@@ -33,10 +34,27 @@ public class Partida {
         }
     }
 
-    public void reiniciarCombo() { combos = 0; }
-    public void avanzarNivel() { nivelActual++; }
-    public int getPuntuacion() { return puntuacion; }
-    public int getNivelActual() { return nivelActual; }
-    public int getVidas() { return vidas; }
-    public void perderVida() { vidas--; }
+    public void reiniciarCombo() {
+        combos = 0;
+    }
+
+    public void avanzarNivel() {
+        nivelActual++;
+    }
+
+    public int getPuntuacion() {
+        return puntuacion;
+    }
+
+    public int getNivelActual() {
+        return nivelActual;
+    }
+
+    public int getVidas() {
+        return vidas;
+    }
+
+    public void perderVida() {
+        vidas--;
+    }
 }

@@ -13,13 +13,14 @@ public class Fruta extends ElementoJuego {
         this.valor = valor;
         this.tiempoVisible = tiempoVisible;
     }
+
     public int getValor() {
         return valor;
     }
 
     public int getTiempoVisible() {
         return tiempoVisible;
-    }  
+    }
 
     @Override
     public void dibujar(Graphics g) {

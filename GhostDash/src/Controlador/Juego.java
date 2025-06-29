@@ -9,7 +9,7 @@ import Modelo.Partida;
 import Modelo.Ranking;
 
 public class Juego {
-        private List<Jugador> jugadores = new ArrayList<>();
+    private List<Jugador> jugadores = new ArrayList<>();
     private Ranking ranking = new Ranking();
     private Partida partidaActual;
     private Scanner scanner = new Scanner(System.in);
@@ -33,7 +33,10 @@ public class Juego {
                 case 1 -> registrarJugador();
                 case 2 -> iniciarPartida();
                 case 3 -> verRanking();
-                case 4 -> { System.out.println("Adiós"); return; }
+                case 4 -> {
+                    System.out.println("Adiós");
+                    return;
+                }
                 default -> System.out.println("Opción inválida");
             }
         }
@@ -94,4 +97,3 @@ public class Juego {
         }
     }
 }
- 

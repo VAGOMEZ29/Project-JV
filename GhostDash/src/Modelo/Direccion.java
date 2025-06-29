@@ -1,4 +1,5 @@
 package Modelo;
+
 public enum Direccion {
     ARRIBA, ABAJO, IZQUIERDA, DERECHA;
 
@@ -29,6 +30,6 @@ public enum Direccion {
 
     public static Direccion aleatoria() {
         Direccion[] dirs = values();
-        return dirs[(int)(Math.random() * dirs.length)];
+        return dirs[(int) (Math.random() * dirs.length)];
     }
 }

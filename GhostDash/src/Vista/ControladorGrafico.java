@@ -28,27 +28,27 @@ public class ControladorGrafico implements KeyListener {
 
     private void cargarLaberintoYElementos() {
         String[] mapa = {
-            "XXXXXXXXXXXXXXXXXXX",
-            "X        X        X",
-            "X XX XXX X XXX XX X",
-            "X                 X",
-            "X XX X XXXXX X XX X",
-            "X    X       X    X",
-            "XXXX XXXX XXXXXXXXX",
-            "OOOX X       OOOOOO",
-            "XXXX X XXrXX X XXXX",
-            "O       bpo       O",
-            "XXXX X XXXXX X XXXX",
-            "OOOX X       X XOOO",
-            "XXXX X XXXXX X XXXX",
-            "X        X        X",
-            "X XX XXX X XXX XX X",
-            "X  X     P     X  X",
-            "XX X X XXXXX X X XX",
-            "X    X   X   X    X",
-            "X XXXXXX X XXXXXX X",
-            "X                 X",
-            "XXXXXXXXXXXXXXXXXXX"
+                "XXXXXXXXXXXXXXXXXXX",
+                "X        X        X",
+                "X XX XXX X XXX XX X",
+                "X                 X",
+                "X XX X XXXXX X XX X",
+                "X    X       X    X",
+                "XXXX XXXX XXXXXXXXX",
+                "OOOX X       OOOOOO",
+                "XXXX X XXrXX X XXXX",
+                "O       bpo       O",
+                "XXXX X XXXXX X XXXX",
+                "OOOX X       X XOOO",
+                "XXXX X XXXXX X XXXX",
+                "X        X        X",
+                "X XX XXX X XXX XX X",
+                "X  X     P     X  X",
+                "XX X X XXXXX X X XX",
+                "X    X   X   X    X",
+                "X XXXXXX X XXXXXX X",
+                "X                 X",
+                "XXXXXXXXXXXXXXXXXXX"
         };
 
         int filas = mapa.length;
@@ -75,10 +75,14 @@ public class ControladorGrafico implements KeyListener {
 
                 switch (simbolo) {
                     case 'P' -> pacman = new PacMan(posicion);
-                    case 'b' -> fantasmas.add(new Fantasma(posicion, cargarImagen("blueGhost.png"), 2.0, EstadoFantasma.NORMAL, TipoIA.PERSEGUIR));
-                    case 'p' -> fantasmas.add(new Fantasma(posicion, cargarImagen("pinkGhost.png"), 2.0, EstadoFantasma.NORMAL, TipoIA.PATRULLAR));
-                    case 'o' -> fantasmas.add(new Fantasma(posicion, cargarImagen("orangeGhost.png"), 2.0, EstadoFantasma.NORMAL, TipoIA.ALEATORIA));
-                    case 'r' -> fantasmas.add(new Fantasma(posicion, cargarImagen("redGhost.png"), 2.0, EstadoFantasma.NORMAL, TipoIA.PERSEGUIR));
+                    case 'b' -> fantasmas.add(new Fantasma(posicion, cargarImagen("blueGhost.png"), 2.0,
+                            EstadoFantasma.NORMAL, TipoIA.PERSEGUIR));
+                    case 'p' -> fantasmas.add(new Fantasma(posicion, cargarImagen("pinkGhost.png"), 2.0,
+                            EstadoFantasma.NORMAL, TipoIA.PATRULLAR));
+                    case 'o' -> fantasmas.add(new Fantasma(posicion, cargarImagen("orangeGhost.png"), 2.0,
+                            EstadoFantasma.NORMAL, TipoIA.ALEATORIA));
+                    case 'r' -> fantasmas.add(new Fantasma(posicion, cargarImagen("redGhost.png"), 2.0,
+                            EstadoFantasma.NORMAL, TipoIA.PERSEGUIR));
                     case 'F' -> frutas.add(new Fruta(posicion, cargarImagen("cherry.png"), 100, 5000));
                     case ' ', 'O' -> puntos.add(new Punto(posicion, 10));
                 }
@@ -101,7 +105,7 @@ public class ControladorGrafico implements KeyListener {
     }
 
     private void iniciarBucleJuego() {
-        int delay = 300; //controla qeu tan rapido se mueve pacman
+        int delay = 300; // controla que tan rapido se mueve pacman
         Timer timer = new Timer(delay, e -> {
             if (puedeMover(pacman.getPosicion(), pacman.getDireccion())) {
                 pacman.mover(pacman.getDireccion());
@@ -146,14 +150,15 @@ public class ControladorGrafico implements KeyListener {
         int dx = posP.x - posF.x;
         int dy = posP.y - posF.y;
         return (Math.abs(dx) > Math.abs(dy)) ? (dx > 0 ? Direccion.DERECHA : Direccion.IZQUIERDA)
-                                             : (dy > 0 ? Direccion.ABAJO : Direccion.ARRIBA);
+                : (dy > 0 ? Direccion.ABAJO : Direccion.ARRIBA);
     }
-    
+
     private Direccion direccionPatrullaje(Fantasma f) {
         Point pos = f.getPosicion();
         Direccion actual = f.getDireccion();
-        //Si puede seguir recto que lo haga
-        if (puedeMover(pos, actual)) return actual;
+        // Si puede seguir recto que lo haga
+        if (puedeMover(pos, actual))
+            return actual;
 
         List<Direccion> opciones = new ArrayList<>();
 
@@ -167,7 +172,7 @@ public class ControladorGrafico implements KeyListener {
             return actual.invertir(); // Solo si no hay más caminos
         }
 
-        return opciones.get((int)(Math.random() * opciones.size()));
+        return opciones.get((int) (Math.random() * opciones.size()));
     }
 
     private boolean puedeMover(Point posicion, Direccion direccion) {
@@ -180,14 +185,15 @@ public class ControladorGrafico implements KeyListener {
 
         // movimiento del tunel horizontal
         if ((direccion == Direccion.IZQUIERDA && posicion.x <= 0) ||
-            (direccion == Direccion.DERECHA && posicion.x >= (columnas - 1) * paso)) {
+                (direccion == Direccion.DERECHA && posicion.x >= (columnas - 1) * paso)) {
             return true;
         }
 
         int col = nuevaX / paso;
         int fila = nuevaY / paso;
 
-        if (fila < 0 || fila >= filas || col < 0 || col >= columnas) return false;
+        if (fila < 0 || fila >= filas || col < 0 || col >= columnas)
+            return false;
 
         return laberinto.getDiseno()[fila][col] != 'X';
     }
@@ -196,11 +202,11 @@ public class ControladorGrafico implements KeyListener {
         int paso = 32;
         int columnas = laberinto.getDiseno()[0].length;
         int maxX = (columnas - 1) * paso;
-        int margen = paso /2;
+        int margen = paso / 2;
 
         Point pos = personaje.getPosicion();
-        int x= pos.x;
-        int y= pos.y;
+        int x = pos.x;
+        int y = pos.y;
 
         if (x < margen) {
             personaje.setPosicion(new Point(maxX, y));
@@ -212,10 +218,12 @@ public class ControladorGrafico implements KeyListener {
     private Image cargarImagen(String nombreArchivo) {
         try {
             InputStream is = getClass().getResourceAsStream("/imgs/" + nombreArchivo);
-            if (is != null) return ImageIO.read(is);
+            if (is != null)
+                return ImageIO.read(is);
 
             File archivo = new File("src/imgs/" + nombreArchivo);
-            if (archivo.exists()) return ImageIO.read(archivo);
+            if (archivo.exists())
+                return ImageIO.read(archivo);
 
             System.err.println("❌ No se encontró: " + nombreArchivo);
         } catch (Exception e) {
@@ -234,6 +242,11 @@ public class ControladorGrafico implements KeyListener {
         }
     }
 
-    @Override public void keyReleased(KeyEvent e) {}
-    @Override public void keyTyped(KeyEvent e) {}
+    @Override
+    public void keyReleased(KeyEvent e) {
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
 }

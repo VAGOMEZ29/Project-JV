@@ -17,7 +17,7 @@ public class VistaJuego extends JPanel implements KeyListener {
     private boolean gameOver;
 
     public VistaJuego(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
-                     List<Fruta> frutas, List<Punto> puntos) {
+            List<Fruta> frutas, List<Punto> puntos) {
         this.laberinto = laberinto;
         this.pacman = pacman;
         this.fantasmas = fantasmas;
@@ -62,9 +62,9 @@ public class VistaJuego extends JPanel implements KeyListener {
 
         // 2. Dibujar puntos
         for (Punto p : puntos) {
-            if (p != null) p.dibujar(g);
+            if (p != null)
+                p.dibujar(g);
         }
-    
 
         // 3. Dibujar frutas
         for (Fruta fruta : frutas) {

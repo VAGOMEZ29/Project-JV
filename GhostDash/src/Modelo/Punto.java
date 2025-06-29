@@ -11,6 +11,7 @@ public class Punto extends ElementoJuego {
         super(posicion, null);
         this.valor = valor;
     }
+
     public int getValor() {
         return valor;
     }
@@ -24,4 +25,3 @@ public class Punto extends ElementoJuego {
         g.fillOval(xCentrado, yCentrado, 8, 8);
     }
 }
-

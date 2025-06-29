@@ -13,6 +13,7 @@ public class PowerUp extends ElementoJuego {
         this.tipo = tipo;
         this.duracion = duracion;
     }
+
     public TipoPowerUp getTipo() {
         return tipo;
     }

@@ -14,7 +14,7 @@ public abstract class ElementoJuego {
     }
 
     public abstract void dibujar(Graphics g);
-    
+
     public Point getPosicion() {
         return posicion;
     }
