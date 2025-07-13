@@ -1,4 +1,4 @@
-package Modelo;
+package modelo;
 
 import javax.swing.ImageIcon;
 import java.awt.Point;

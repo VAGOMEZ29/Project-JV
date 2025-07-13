@@ -1,4 +1,4 @@
-package Modelo;
+package modelo;
 
 import java.awt.Point;
 import java.awt.Image;
@@ -13,8 +13,10 @@ public abstract class ElementoJuego {
         this.imagen = imagen;
     }
 
+    // Cada subclase debe saber cómo dibujarse a sí misma.
     public abstract void dibujar(Graphics g);
 
+    // Getters y Setters
     public Point getPosicion() {
         return posicion;
     }

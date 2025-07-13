@@ -1,4 +1,4 @@
-package Modelo;
+package modelo;
 
 import java.awt.Point;
 import java.awt.Image;
@@ -26,7 +26,6 @@ public class PowerUp extends ElementoJuego {
         // Activar efecto del PowerUp
     }
 
-    @Override
     public void dibujar(Graphics g) {
         // Dibuja power-up
         if (imagen != null && posicion != null) {

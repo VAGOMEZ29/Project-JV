@@ -1,8 +1,8 @@
-import Vista.ControladorGrafico;
+import controlador.GameManager;
 
 public class App {
     public static void main(String[] args) {
-        ControladorGrafico controlador = new ControladorGrafico();
-        controlador.iniciar();
+        // Creamos una instancia de GameManager, que ahora se encarga de todo.
+        new GameManager();
     }
 }

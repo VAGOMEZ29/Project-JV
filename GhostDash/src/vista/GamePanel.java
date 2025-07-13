@@ -1,12 +1,14 @@
-package Vista;
+package vista;
 
 import javax.swing.*;
+
+import modelo.*;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
-import Modelo.*;
 
-public class VistaJuego extends JPanel implements KeyListener {
+public class GamePanel extends JPanel implements KeyListener {
     private Laberinto laberinto;
     private PacMan pacman;
     private List<Fantasma> fantasmas;
@@ -16,7 +18,7 @@ public class VistaJuego extends JPanel implements KeyListener {
     private int vidas;
     private boolean gameOver;
 
-    public VistaJuego(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
+    public GamePanel(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
             List<Fruta> frutas, List<Punto> puntos) {
         this.laberinto = laberinto;
         this.pacman = pacman;
