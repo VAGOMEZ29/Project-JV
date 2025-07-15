@@ -1,4 +1,4 @@
-package modelo; // Asegúrate de que este sea el paquete correcto
+package modelo; 
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

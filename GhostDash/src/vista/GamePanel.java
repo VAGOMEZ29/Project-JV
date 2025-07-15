@@ -1,55 +1,132 @@
 package vista;
 
-import javax.swing.*;
-
 import modelo.*;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 
-public class GamePanel extends JPanel implements KeyListener {
+public class GamePanel extends JPanel {
+
     private Laberinto laberinto;
     private PacMan pacman;
     private List<Fantasma> fantasmas;
     private List<Fruta> frutas;
     private List<Punto> puntos;
+    private List<PowerUp> powerUps;
+
+    private boolean juegoTerminado = false;
+    private boolean juegoGanado = false;
+
     private int puntuacion;
     private int vidas;
-    private boolean gameOver;
+
+    private JButton botonReiniciar;
+    private Runnable reiniciarListener;
 
     public GamePanel(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
-            List<Fruta> frutas, List<Punto> puntos) {
+                     List<Fruta> frutas, List<Punto> puntos, List<PowerUp> powerUps) {
         this.laberinto = laberinto;
         this.pacman = pacman;
         this.fantasmas = fantasmas;
         this.frutas = frutas;
         this.puntos = puntos;
+        this.powerUps = powerUps;
 
-        // Configuración inicial del panel
-        setPreferredSize(new Dimension(608, 672)); // Tamaño del tablero
+        setPreferredSize(new Dimension(laberinto.getColumnas() * 32, laberinto.getFilas() * 32));
         setBackground(Color.BLACK);
-        setFocusable(true); // Permite recibir eventos de teclado
-        addKeyListener(this);
+        setFocusable(true);
+        setLayout(null);
+        requestFocusInWindow();
 
-        // Debug inicial
-        System.out.println("[DEBUG] Laberinto cargado: " + (laberinto != null));
-        System.out.println("[DEBUG] PacMan cargado en: " + pacman.getPosicion());
-        System.out.println("[DEBUG] Fantasmas cargados: " + fantasmas.size());
+        crearBotonReiniciar();
     }
 
-    public void actualizarEstado(int puntuacion, int vidas, boolean gameOver) {
+    private void crearBotonReiniciar() {
+        botonReiniciar = new JButton("Jugar de nuevo");
+        botonReiniciar.setBounds(300, 350, 200, 40);
+        botonReiniciar.setVisible(false);
+
+        // Estilo visual personalizado
+        botonReiniciar.setFont(new Font("Arial", Font.BOLD, 18));
+        botonReiniciar.setBackground(Color.BLACK);
+        botonReiniciar.setForeground(Color.YELLOW);
+        botonReiniciar.setFocusPainted(false);
+        botonReiniciar.setBorder(BorderFactory.createLineBorder(Color.YELLOW, 2));
+        botonReiniciar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        botonReiniciar.setContentAreaFilled(true);
+        botonReiniciar.setOpaque(true);
+
+        // Acción al hacer clic
+        botonReiniciar.addActionListener(e -> {
+            botonReiniciar.setVisible(false);
+            if (reiniciarListener != null) reiniciarListener.run();
+        });
+
+        add(botonReiniciar);
+    }
+
+    public void setReiniciarListener(Runnable listener) {
+        this.reiniciarListener = listener;
+    }
+
+    public void inicializarControles(PacMan pacman) {
+        requestFocusInWindow();
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_UP -> pacman.setDireccion(Direccion.ARRIBA);
+                    case KeyEvent.VK_DOWN -> pacman.setDireccion(Direccion.ABAJO);
+                    case KeyEvent.VK_LEFT -> pacman.setDireccion(Direccion.IZQUIERDA);
+                    case KeyEvent.VK_RIGHT -> pacman.setDireccion(Direccion.DERECHA);
+                }
+            }
+        });
+    }
+
+    public void actualizarEstado(int puntuacion, int vidas, boolean perdio, boolean gano) {
         this.puntuacion = puntuacion;
         this.vidas = vidas;
-        this.gameOver = gameOver;
+        this.juegoTerminado = perdio;
+        this.juegoGanado = gano;
         repaint();
+    }
+
+    public void mostrarBotonReiniciar() {
+        botonReiniciar.setVisible(true);
+        requestFocusInWindow();
+    }
+
+    public void setPacMan(PacMan pacman) {
+        this.pacman = pacman;
+    }
+
+    public void setFantasmas(List<Fantasma> fantasmas) {
+        this.fantasmas = fantasmas;
+    }
+
+    public void setFrutas(List<Fruta> frutas) {
+        this.frutas = frutas;
+    }
+
+    public void setPowerUps(List<PowerUp> powerUps) {
+        this.powerUps = powerUps;
+    }
+
+    public void setPuntos(List<Punto> puntos) {
+        this.puntos = puntos;
+    }
+
+    public void setLaberinto(Laberinto laberinto) {
+        this.laberinto = laberinto;
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 1. Dibujar laberinto (paredes)
         if (laberinto != null && laberinto.getDiseno() != null) {
             char[][] diseño = laberinto.getDiseno();
             for (int fila = 0; fila < diseño.length; fila++) {
@@ -62,71 +139,29 @@ public class GamePanel extends JPanel implements KeyListener {
             }
         }
 
-        // 2. Dibujar puntos
-        for (Punto p : puntos) {
-            if (p != null)
-                p.dibujar(g);
-        }
+        for (Punto punto : List.copyOf(puntos)) punto.dibujar(g);
+        for (Fruta fruta : List.copyOf(frutas)) fruta.dibujar(g);
+        for (PowerUp powerUp : List.copyOf(powerUps)) powerUp.dibujar(g);
+        for (Fantasma fantasma : List.copyOf(fantasmas)) fantasma.dibujar(g);
+        if (pacman != null) pacman.dibujar(g);
 
-        // 3. Dibujar frutas
-        for (Fruta fruta : frutas) {
-            if (fruta != null && fruta.getImagen() != null) {
-                g.drawImage(fruta.getImagen(), fruta.getPosicion().x, fruta.getPosicion().y, this);
-            }
-        }
-
-        // 4. Dibujar fantasmas
-        for (Fantasma fantasma : fantasmas) {
-            if (fantasma != null && fantasma.getImagen() != null) {
-                g.drawImage(fantasma.getImagen(), fantasma.getPosicion().x, fantasma.getPosicion().y, this);
-            }
-        }
-
-        // 5. Dibujar PacMan
-        if (pacman != null && pacman.getImagen() != null) {
-            g.drawImage(pacman.getImagen(), pacman.getPosicion().x, pacman.getPosicion().y, this);
-        }
-
-        // 6. Dibujar información de juego
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 18));
-        g.drawString("Puntuación: " + puntuacion, 20, 20);
-        g.drawString("Vidas: " + vidas, 500, 20);
+        g.drawString("Puntos: " + puntuacion, 20, 25);
+        g.drawString("Vidas: " + vidas, 160, 25);
 
-        // 7. Dibujar Game Over si corresponde
-        if (gameOver) {
-            g.setColor(Color.RED);
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            String texto = "GAME OVER";
-            int anchoTexto = g.getFontMetrics().stringWidth(texto);
-            g.drawString(texto, (getWidth() - anchoTexto) / 2, getHeight() / 2);
+        if (juegoTerminado) {
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setColor(new Color(0, 0, 0, 180)); // negro semitransparente
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            g2d.setColor(Color.RED);
+            g2d.setFont(new Font("Arial", Font.BOLD, 48));
+            g2d.drawString("Game Over", getWidth() / 2 - 140, getHeight() / 2);
+        } else if (juegoGanado) {
+            g.setFont(new Font("Arial", Font.BOLD, 48));
+            g.setColor(Color.GREEN);
+            g.drawString("You Win!", getWidth() / 2 - 110, getHeight() / 2);
         }
-    }
-
-    // Implementación de KeyListener
-    @Override
-    public void keyPressed(KeyEvent e) {
-        Direccion dir = switch (e.getKeyCode()) {
-            case KeyEvent.VK_UP, KeyEvent.VK_W -> Direccion.ARRIBA;
-            case KeyEvent.VK_DOWN, KeyEvent.VK_S -> Direccion.ABAJO;
-            case KeyEvent.VK_LEFT, KeyEvent.VK_A -> Direccion.IZQUIERDA;
-            case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> Direccion.DERECHA;
-            default -> null;
-        };
-
-        if (dir != null && pacman != null) {
-            pacman.setDireccion(dir);
-            repaint();
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-        // No se requiere acción al soltar teclas
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-        // No se requiere acción al teclear
     }
 }

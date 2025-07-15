@@ -1,20 +1,17 @@
 package controlador;
 
-import modelo.*; // Importa todas las clases del modelo
 import vista.GamePanel;
+import modelo.*;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-/**
- * GameController actúa como el gestor de una partida en curso.
- * Prepara el nivel y actualiza el estado de todos los elementos del juego
- * en cada fotograma. Ya no controla el bucle principal del juego.
- */
 public class GameController {
 
     private GamePanel vista;
@@ -23,169 +20,283 @@ public class GameController {
     private List<Fantasma> fantasmas;
     private List<Fruta> frutas;
     private List<Punto> puntos;
+    private List<PowerUp> powerUps;
 
-    // El método iniciar() ha sido reemplazado.
-    // El GameManager ahora se encarga de la inicialización general.
+    private int puntuacion = 0;
+    private int vidas = 3;
+    private int nivelActual = 1;
+    private boolean pacmanInvencible = false;
+    private boolean fantasmasCongelados = false;
+    private Jugador jugador;
+    private Timer juegoTimer;
 
-    /**
-     * Prepara todos los elementos necesarios para una partida (laberinto,
-     * personajes, etc.)
-     * y crea el panel de juego (GamePanel) para ser mostrado en la ventana
-     * principal.
-     * 
-     * @return El GamePanel listo para ser añadido al JFrame.
-     */
+    private CategoriaJuego categoria = CategoriaJuego.CLASICO;
+    private final SoundManager soundManager = new SoundManager();
+
+    public void setCategoria(CategoriaJuego categoria) {
+        this.categoria = categoria;
+    }
+
     public GamePanel prepararJuego() {
+        if (jugador == null) {
+            jugador = new Jugador("Temporal", "tempUser", "1234", 18, true);
+        }
         cargarLaberintoYElementos();
-
-        // Crea la vista (el panel) y la devuelve para que el GameManager la gestione.
-        vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos);
+        vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
+        vista.inicializarControles(pacman);
+        juegoTimer = new Timer(150, e -> actualizarJuego());
+        juegoTimer.start();
+        vista.setReiniciarListener(this::reiniciarJuegoDesdeInterfaz);
         return vista;
     }
 
-    /**
-     * Carga el diseño del laberinto desde un mapa de caracteres y crea
-     * una instancia de cada elemento del juego (Pac-Man, fantasmas, puntos)
-     * en su posición inicial.
-     */
     private void cargarLaberintoYElementos() {
-        String[] mapa = {
-                "XXXXXXXXXXXXXXXXXXX",
-                "X........X........X",
-                "X.XX.XXX.X.XXX.XX.X",
-                "X.................X",
-                "X.XX.X.XXXXX.X.XX.X",
-                "X....X.......X....X",
-                "XXXX.XXXX.X.XXXXXXX",
-                "OOOO.X... ...X.OOOOO",
-                "XXXX.X.XXrXX.X.XXXX",
-                "O......bp.o.......O",
-                "XXXX.X.XXXXX.X.XXXX",
-                "OOOO.X.......X.XOOO",
-                "XXXX.X.XXXXX.X.XXXX",
-                "X........X........X",
-                "X.XX.XXX.X.XXX.XX.X",
-                "X..X.....P.....X..X",
-                "XX.X.X.XXXXX.X.X.XX",
-                "X....X...X...X....X",
-                "X.XXXXXX.X.XXXXXX.X",
-                "X.................X",
-                "XXXXXXXXXXXXXXXXXXX"
-        };
-        // Nota: He reemplazado los espacios en blanco por '.' para mayor claridad.
-        // La lógica para crear los puntos debe ajustarse si es necesario.
+        NivelInfo nivelInfo = Nivel.cargarNivel(nivelActual, categoria);
 
-        int filas = mapa.length;
-        int columnas = mapa[0].length();
-        char[][] diseno = new char[filas][columnas];
+        this.laberinto = nivelInfo.getLaberinto();
+        this.pacman = nivelInfo.getPacman();
+        this.fantasmas = nivelInfo.getFantasmas();
+        this.frutas = nivelInfo.getFrutas();
+        this.puntos = nivelInfo.getPuntos();
+        this.powerUps = nivelInfo.getPowerUps();
 
-        fantasmas = new ArrayList<>();
-        frutas = new ArrayList<>();
-        puntos = new ArrayList<>();
-        laberinto = new Laberinto();
-
-        for (int f = 0; f < filas; f++) {
-            diseno[f] = mapa[f].toCharArray();
-        }
-        laberinto.setDiseno(diseno);
-
-        for (int f = 0; f < filas; f++) {
-            for (int c = 0; c < columnas; c++) {
-                char simbolo = diseno[f][c];
-                Point posicion = new Point(c * 32, f * 32);
-
-                switch (simbolo) {
-                    case 'P' -> pacman = new PacMan(posicion);
-
-                    // ¡AQUÍ ESTÁ EL CAMBIO CLAVE! Se instancian las clases específicas de
-                    // fantasmas.
-                    case 'r' -> fantasmas.add(new FantasmaRojo(posicion, cargarImagen("redGhost.png"), 1.0));
-                    case 'p' -> fantasmas.add(new FantasmaRosa(posicion, cargarImagen("pinkGhost.png"), 1.0));
-                    case 'b' -> fantasmas.add(new FantasmaAzul(posicion, cargarImagen("blueGhost.png"), 1.0));
-                    case 'o' -> fantasmas.add(new FantasmaNaranja(posicion, cargarImagen("orangeGhost.png"), 1.0));
-
-                    case 'F' -> frutas.add(new Fruta(posicion, cargarImagen("cherry.png"), 100, 5000));
-
-                    // Si el espacio está vacío (representado por '.') o es un túnel ('O') se añade
-                    // un punto.
-                    case '.', 'O' -> puntos.add(new Punto(posicion, 10));
-                }
-            }
-        }
+        if (pacman != null) pacman.setDireccion(Direccion.NINGUNA);
     }
 
     public void actualizarJuego() {
-        // 1. Actualizar la lógica de movimiento de Pac-Man
-        // Comprobamos si Pac-Man puede moverse AHORA y si la casilla destino es válida.
+        if (vidas <= 0) {
+            juegoTimer.stop();
+            vista.actualizarEstado(puntuacion, vidas, true, false);
+            vista.mostrarBotonReiniciar();
+            return;
+        }
+
+        if (puntos.isEmpty()) {
+            pasarDeNivel();
+            return;
+        }
+
         if (pacman.puedeMoverseAhora() && laberinto.puedeMover(pacman.getPosicion(), pacman.getDireccion())) {
             pacman.mover(pacman.getDireccion());
             aplicarEfectoTunel(pacman);
         }
 
-        // 2. Actualizar la lógica de movimiento de cada Fantasma
         for (Fantasma fantasma : fantasmas) {
-            // Comprobamos si el FANTASMA puede moverse AHORA.
-            if (fantasma.puedeMoverseAhora()) {
-                // Si puede, entonces calcula su siguiente movimiento y lo ejecuta.
+            fantasma.actualizarEstado();
+            if (!fantasmasCongelados && fantasma.puedeMoverseAhora()) {
                 fantasma.actualizarMovimiento(pacman, fantasmas, laberinto);
                 aplicarEfectoTunel(fantasma);
             }
         }
 
-        // 3. Futura lógica de juego
-        // verificarColisiones();
-        // verificarComerPuntos();
-        // verificarCondicionVictoria();
+        verificarPuntos();
+        if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
+            verificarPowerUps();
+        }
+        verificarFrutas();
+        verificarColisiones();
+
+        vista.actualizarEstado(puntuacion, vidas, false, puntos.isEmpty());
     }
 
-    /**
-     * Gestiona el teletransporte de un personaje cuando llega
-     * a los extremos del túnel horizontal del laberinto.
-     * 
-     * @param personaje El personaje (Pac-Man o Fantasma) a evaluar.
-     */
+    private void reiniciarJuegoDesdeInterfaz() {
+        puntuacion = 0;
+        vidas = 3;
+        nivelActual = 1;
+
+        cargarLaberintoYElementos();
+
+        pacman.setPosicion(buscarPosicionInicialPacman());
+        pacman.setDireccion(Direccion.NINGUNA);
+        for (Fantasma fantasma : fantasmas) reiniciarFantasma(fantasma);
+
+        vista.setPacMan(pacman);
+        vista.setFantasmas(fantasmas);
+        vista.setFrutas(frutas);
+        vista.setPowerUps(powerUps);
+        vista.setPuntos(puntos);
+        vista.setLaberinto(laberinto);
+        vista.actualizarEstado(puntuacion, vidas, false, false);
+        vista.inicializarControles(pacman);
+
+        if (juegoTimer != null) juegoTimer.start();
+    }
+
+    private void pasarDeNivel() {
+        if (nivelActual >= 3) {
+            juegoTimer.stop();
+            vista.actualizarEstado(puntuacion, vidas, false, true);
+            vista.mostrarBotonReiniciar();
+            return;
+        }
+
+        nivelActual++;
+        cargarLaberintoYElementos();
+
+        pacman.setPosicion(buscarPosicionInicialPacman());
+        pacman.setDireccion(Direccion.NINGUNA);
+
+        for (Fantasma fantasma : fantasmas) reiniciarFantasma(fantasma);
+
+        vista.setPacMan(pacman);
+        vista.setFantasmas(fantasmas);
+        vista.setFrutas(frutas);
+        vista.setPowerUps(powerUps);
+        vista.setPuntos(puntos);
+        vista.setLaberinto(laberinto);
+        vista.actualizarEstado(puntuacion, vidas, false, false);
+        vista.inicializarControles(pacman);
+    }
+
+    private void verificarPuntos() {
+        // Se reemplazó el bucle for-each por un Iterator para evitar ConcurrentModificationException.
+        // Esto ocurre porque no se puede modificar una lista mientras se recorre con for-each.
+        // Con Iterator y su método remove(), se puede eliminar de forma segura.
+        synchronized (puntos) {
+            Iterator<Punto> iter = puntos.iterator();
+            while (iter.hasNext()) {
+                Punto p = iter.next();
+                if (pacman.getPosicion().equals(p.getPosicion())) {
+                    puntuacion += p.getValor();
+                    soundManager.reproducirComer();
+                    iter.remove();
+                }
+            }
+        }
+    }
+
+    private void verificarPowerUps() {
+        List<PowerUp> recogidos = new ArrayList<>();
+        for (PowerUp p : powerUps) {
+            if (pacman.getPosicion().equals(p.getPosicion())) {
+                activarEfecto(p.getTipo(), p.getDuracion());
+                puntuacion += 50;
+                recogidos.add(p);
+                soundManager.reproducirEfecto("pacman_powerUp.wav");
+            }
+        }
+        powerUps.removeAll(recogidos);
+    }
+
+    private void activarEfecto(TipoPowerUp tipo, int duracion) {
+        switch (tipo) {
+            case INVENCIBILIDAD -> {
+                pacmanInvencible = true;
+                for (Fantasma fantasma : fantasmas) fantasma.activarHuida(duracion);
+                Timer timer = new Timer(duracion, e -> pacmanInvencible = false);
+                timer.setRepeats(false);
+                timer.start();
+            }
+            case CONGELAR_ENEMIGOS -> {
+                fantasmasCongelados = true;
+                Timer timer = new Timer(duracion, e -> fantasmasCongelados = false);
+                timer.setRepeats(false);
+                timer.start();
+            }
+            case VELOCIDAD -> {
+                double originalSpeed = pacman.getVelocidad();
+                pacman.setVelocidad(originalSpeed * 2);
+                Timer timer = new Timer(duracion, e -> pacman.setVelocidad(originalSpeed));
+                timer.setRepeats(false);
+                timer.start();
+            }
+            case DOBLE_PUNTOS -> System.out.println("PowerUp DOBLE_PUNTOS aún no implementado.");
+        }
+    }
+
+    private void verificarFrutas() {
+        List<Fruta> comidas = new ArrayList<>();
+        for (Fruta fruta : frutas) {
+            if (pacman.getPosicion().equals(fruta.getPosicion())) {
+                puntuacion += fruta.getValor();
+                soundManager.reproducirComer();
+                comidas.add(fruta);
+            }
+        }
+        frutas.removeAll(comidas);
+    }
+
+    private void verificarColisiones() {
+        if (vidas <= 0) return;
+
+        for (Fantasma fantasma : fantasmas) {
+            if (pacman.getPosicion().equals(fantasma.getPosicion())) {
+                if (pacmanInvencible) {
+                    puntuacion += 200;
+                    reiniciarFantasma(fantasma);
+                    soundManager.reproducirEfecto("pacman_comiendoFantasma.wav");
+                } else {
+                    vidas--;
+                    pacman.morir();
+                    soundManager.reproducirEfecto("pacman_muerto.wav");
+                    if (vidas <= 0) {
+                        juegoTimer.stop();
+                        vista.actualizarEstado(puntuacion, vidas, true, false);
+                        vista.mostrarBotonReiniciar();
+                    } else {
+                        reiniciarNivel();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    private void reiniciarFantasma(Fantasma fantasma) {
+        fantasma.setPosicion(fantasma.getPosicionInicial());
+        fantasma.setDireccion(Direccion.aleatoria());
+    }
+
+    private Point buscarPosicionInicialPacman() {
+        for (int f = 0; f < laberinto.getFilas(); f++) {
+            for (int c = 0; c < laberinto.getColumnas(); c++) {
+                if (laberinto.getDiseno()[f][c] == 'P') {
+                    return new Point(c * 32, f * 32);
+                }
+            }
+        }
+        return new Point(0, 0);
+    }
+
+    private void reiniciarNivel() {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        pacman.setPosicion(buscarPosicionInicialPacman());
+        pacman.setDireccion(Direccion.NINGUNA);
+        for (Fantasma fantasma : fantasmas) reiniciarFantasma(fantasma);
+
+        pacmanInvencible = false;
+        vista.actualizarEstado(puntuacion, vidas, false, false);
+    }
+
     private void aplicarEfectoTunel(Personaje personaje) {
         int paso = 32;
         int columnas = laberinto.getDiseno()[0].length;
         int maxX = (columnas - 1) * paso;
-
         Point pos = personaje.getPosicion();
 
-        if (pos.x < -paso / 2) { // Si se ha movido completamente fuera por la izquierda
+        if (pos.x < -paso / 2) {
             personaje.setPosicion(new Point(maxX, pos.y));
-        } else if (pos.x > maxX + paso / 2) { // Si se ha movido completamente fuera por la derecha
+        } else if (pos.x > maxX + paso / 2) {
             personaje.setPosicion(new Point(0, pos.y));
         }
     }
 
-    /**
-     * Carga un recurso de imagen desde el classpath o el sistema de archivos.
-     * 
-     * @param nombreArchivo El nombre del archivo de imagen (ej. "pacman.png").
-     * @return un objeto Image o null si ocurre un error.
-     */
     private Image cargarImagen(String nombreArchivo) {
         try {
-            InputStream is = getClass().getResourceAsStream("/imgs/" + nombreArchivo);
-            if (is != null) {
-                return ImageIO.read(is);
-            }
-            File archivo = new File("src/imgs/" + nombreArchivo);
-            if (archivo.exists()) {
-                return ImageIO.read(archivo);
-            }
-            System.err.println("❌ Recurso no encontrado: " + nombreArchivo);
+            InputStream is = getClass().getResourceAsStream("/resources/imgs/" + nombreArchivo);
+            if (is != null) return ImageIO.read(is);
+            File archivo = new File("src/resources/imgs/" + nombreArchivo);
+            if (archivo.exists()) return ImageIO.read(archivo);
+            System.err.println("Imagen no encontrada: " + nombreArchivo);
         } catch (Exception e) {
-            System.err.println("❌ Error al cargar la imagen '" + nombreArchivo + "': " + e.getMessage());
+            System.err.println("Error al cargar la imagen '" + nombreArchivo + "': " + e.getMessage());
         }
         return null;
     }
-
-    // --- MÉTODOS ELIMINADOS ---
-    // iniciarBucleJuego() -> Gestionado por GameManager
-    // iniciarBucleFantasma() -> Gestionado por GameManager
-    // moverFantasma() -> Lógica movida a las clases de Fantasma
-    // calcularDireccionHaciaPacman() -> Lógica movida a FantasmaRojo
-    // direccionPatrullaje() -> Lógica movida a FantasmaRosa
-    // puedeMover() -> Lógica movida a Laberinto
 }
+        

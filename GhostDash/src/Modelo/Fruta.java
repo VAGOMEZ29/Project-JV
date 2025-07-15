@@ -24,9 +24,15 @@ public class Fruta extends ElementoJuego {
 
     @Override
     public void dibujar(Graphics g) {
-        // Dibuja fruta
         if (imagen != null && posicion != null) {
-            g.drawImage(imagen, posicion.x, posicion.y, null);
+            int ancho = 20;
+            int alto = 20;
+
+            // Centramos la imagen dentro de la celda de 32x32
+            int offsetX = (32 - ancho) / 2;
+            int offsetY = (32 - alto) / 2;
+
+            g.drawImage(imagen, posicion.x + offsetX, posicion.y + offsetY, ancho, alto, null);
         }
     }
 }

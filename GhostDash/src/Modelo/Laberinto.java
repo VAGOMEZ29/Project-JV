@@ -1,7 +1,7 @@
 package modelo;
 
 import java.awt.Point;
-
+//(estructra del mapa)
 public class Laberinto {
     private int numeroNivel;
     private int dificultad;
@@ -55,5 +55,14 @@ public class Laberinto {
             return false;
 
         return diseno[fila][col] != 'X';
+    }
+    
+     // Métodos nuevos para GameController
+    public int getFilas() {
+        return diseno.length;
+    }
+
+    public int getColumnas() {
+        return diseno[0].length;
     }
 }

@@ -23,13 +23,19 @@ public class PowerUp extends ElementoJuego {
     }
 
     public void activar() {
-        // Activar efecto del PowerUp
+        // Lógica del efecto del PowerUp (se maneja en GameController)
     }
 
     public void dibujar(Graphics g) {
-        // Dibuja power-up
         if (imagen != null && posicion != null) {
-            g.drawImage(imagen, posicion.x, posicion.y, null);
+            int ancho = 15;
+            int alto = 15;
+
+            // Corregido: centramos la imagen dentro del bloque de 32x32
+            int offsetX = (32 - ancho) / 2;
+            int offsetY = (32 - alto) / 2;
+
+            g.drawImage(imagen, posicion.x + offsetX, posicion.y + offsetY, ancho, alto, null);
         }
     }
 }

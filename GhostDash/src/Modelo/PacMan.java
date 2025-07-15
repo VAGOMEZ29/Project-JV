@@ -34,6 +34,9 @@ public class PacMan extends Personaje {
             case ABAJO -> imagen = imgDown;
             case IZQUIERDA -> imagen = imgLeft;
             case DERECHA -> imagen = imgRight;
+            case NINGUNA -> {
+                // No hacer nada, conservar la imagen actual
+            } 
         }
     }
 
@@ -43,16 +46,17 @@ public class PacMan extends Personaje {
 
     private Image cargarImagen(String nombreArchivo) {
         try {
-            String ruta = "/imgs/" + nombreArchivo;
+            // Usar ruta absoluta desde el classpath
+            String ruta = "/resources/imgs/" + nombreArchivo;
             URL url = getClass().getResource(ruta);
             if (url == null) {
-                System.err.println(" No se encontró el recurso: " + ruta);
+                System.err.println("No se encontró el recurso: " + ruta);
                 return null;
             }
             ImageIcon icon = new ImageIcon(url);
             return icon.getImage();
         } catch (Exception e) {
-            System.err.println(" Error al cargar imagen: " + nombreArchivo + " → " + e.getMessage());
+            System.err.println("Error al cargar imagen: " + nombreArchivo + " → " + e.getMessage());
             return null;
         }
     }
@@ -98,6 +102,9 @@ public class PacMan extends Personaje {
                     posicion.x = 0;
                 }
             }
+            case NINGUNA ->{
+                //no se mueve
+            }
         }
         setDireccion(direccion);
     }
@@ -105,9 +112,16 @@ public class PacMan extends Personaje {
     @Override
     public void dibujar(Graphics g) {
         if (imagen != null && posicion != null) {
-            g.drawImage(imagen, posicion.x, posicion.y, null);
+            int ancho = 30;
+            int alto = 30;
+
+            // Centramos la imagen respecto al centro de la celda de 32x32
+            int offsetX = (32 - ancho) / 2;
+            int offsetY = (32 - alto) / 2;
+
+            g.drawImage(imagen, posicion.x + offsetX, posicion.y + offsetY, ancho, alto, null);
         } else {
-            System.err.println(" Imagen o posición de PacMan no inicializada.");
+            System.err.println("Imagen o posición de PacMan no inicializada.");
         }
     }
 

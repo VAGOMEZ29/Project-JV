@@ -11,7 +11,8 @@ public enum Direccion {
     ARRIBA(0, -1), // x no cambia, y disminuye
     ABAJO(0, 1), // x no cambia, y aumenta
     IZQUIERDA(-1, 0), // x disminuye, y no cambia
-    DERECHA(1, 0); // x aumenta, y no cambia
+    DERECHA(1, 0), // x aumenta, y no cambia
+    NINGUNA(0, 0); // x y no cambia
 
     private final int dx; // Cambio en la coordenada X
     private final int dy; // Cambio en la coordenada Y
@@ -49,6 +50,7 @@ public enum Direccion {
             case ABAJO -> ARRIBA;
             case IZQUIERDA -> DERECHA;
             case DERECHA -> IZQUIERDA;
+            case NINGUNA -> NINGUNA; // No hay dirección opuesta para NINGUNA
         };
     }
 

@@ -1,30 +1,78 @@
 package controlador;
 
-import javax.swing.JFrame;
 import vista.GamePanel;
+import vista.MenuPrincipal;
+import modelo.*;
+
+import javax.swing.*;
 
 /**
- * GameManager es la clase principal que controla el flujo general de la
- * aplicación.
- * Gestiona los estados del juego (menú, jugando, pausa), la ventana
+ * GameManager es la clase principal que controla el flujo general de la aplicación.
+ * Gestiona los estados del juego (menú, jugando), la ventana,
  * y el hilo principal del juego (Game Loop).
  */
 public class GameManager implements Runnable {
 
     private JFrame ventana;
     private GamePanel gamePanel;
+    private MenuPrincipal menuPrincipal;
     private GameController gameController;
+    private SoundManager soundManager = new SoundManager();
 
     private Thread gameThread;
     private volatile GameState gameState; // 'volatile' asegura visibilidad entre hilos
 
-    private final int FPS = 60; // Nuestro objetivo de fotogramas por segundo
+    private final int FPS = 60; // Fotogramas por segundo
 
+    /**
+     * Constructor: al iniciar la aplicación, se muestra el menú principal.
+     */
     public GameManager() {
-        // Por ahora, al iniciar la aplicación, saltamos directamente a jugar.
-        // Más adelante, aquí cambiaremos para que el estado inicial sea MENU_PRINCIPAL
-        // y se muestre una pantalla de menú.
-        iniciarJuego();
+        mostrarMenu(); // En vez de iniciar el juego directamente
+    }
+
+    /**
+     * Muestra el menú principal y prepara los botones de acción.
+     */
+    public void mostrarMenu() {
+        gameState = GameState.MENU_PRINCIPAL;
+
+        // Asegúrate de que esté inicializado antes
+        if (soundManager == null) {
+            soundManager = new SoundManager();
+        }
+
+        // Inicia música de fondo del menú
+        soundManager.reproducirMusicaFondo("pacman_inicio.wav");
+
+        menuPrincipal = new MenuPrincipal(e -> {
+            if (e.getSource() == menuPrincipal.getBtnJugar()) {
+                String categoria = menuPrincipal.getCategoriaSeleccionada();
+                System.out.println("Categoría seleccionada: " + categoria);
+
+                gameController = new GameController();
+
+                if (categoria.equalsIgnoreCase("Mejorado")) {
+                    gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
+                } else {
+                    gameController.setCategoria(CategoriaJuego.CLASICO);
+                }
+
+                // Detiene música del menú al iniciar el juego
+                soundManager.detenerMusicaFondo();
+                iniciarJuego();
+
+            } else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
+                JOptionPane.showMessageDialog(ventana,
+                        "Controles:\n← ↑ → ↓ para mover a Pac-Man.\nCome todos los puntos para ganar.\nEvita los fantasmas (a menos que tengas un Power-Up).\n\nModos:\nClásico: experiencia original.\nMejorado: incluye mejoras gráficas e IA.\nMultijugador: (próximamente)",
+                        "Instrucciones", JOptionPane.INFORMATION_MESSAGE);
+
+            } else if (e.getSource() == menuPrincipal.getBtnSalir()) {
+                System.exit(0);
+            }
+        });
+
+        crearVentanaConPanel(menuPrincipal);
     }
 
     /**
@@ -34,37 +82,33 @@ public class GameManager implements Runnable {
         System.out.println("Cambiando a estado: JUGANDO");
         gameState = GameState.JUGANDO;
 
-        // 1. Creamos un controlador para la partida.
-        gameController = new GameController();
-
-        // 2. El controlador prepara todos los objetos del juego y nos devuelve el panel
-        // gráfico.
         gamePanel = gameController.prepararJuego();
 
-        // 3. Creamos la ventana principal de la aplicación.
-        crearVentana();
+        crearVentanaConPanel(gamePanel);
 
-        // 4. Iniciamos el hilo (thread) que contendrá el bucle principal del juego.
         gameThread = new Thread(this);
         gameThread.start();
     }
 
     /**
-     * Configura y muestra la ventana (JFrame) del juego.
+     * Crea una ventana nueva (JFrame) y añade el panel recibido.
+     * Reutilizable tanto para menú como para juego.
+     *
+     * @param panel El panel que se desea mostrar (menú o juego).
      */
-    private void crearVentana() {
+    private void crearVentanaConPanel(JPanel panel) {
+        if (ventana != null) {
+            ventana.dispose(); // Cerramos la ventana anterior si existe
+        }
+
         ventana = new JFrame("GhostDash");
         ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         ventana.setResizable(false);
-
-        ventana.add(gamePanel); // Añadimos el panel del juego a la ventana.
-
-        ventana.pack(); // Ajusta el tamaño de la ventana al del panel.
-        ventana.setLocationRelativeTo(null); // Centra la ventana en la pantalla.
+        ventana.add(panel);
+        ventana.pack(); // Ajusta el tamaño al contenido del panel
+        ventana.setLocationRelativeTo(null); // Centra la ventana en la pantalla
         ventana.setVisible(true);
-
-        // Es crucial dar el foco al panel para que escuche las teclas.
-        gamePanel.requestFocusInWindow();
+        panel.requestFocusInWindow(); // Necesario para capturar teclas
     }
 
     /**
@@ -73,7 +117,7 @@ public class GameManager implements Runnable {
      */
     @Override
     public void run() {
-        // Calculamos el intervalo de tiempo para cada fotograma en nanosegundos.
+        // Intervalo de tiempo para dibujar a 60 FPS
         double drawInterval = 1000000000.0 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
@@ -85,13 +129,11 @@ public class GameManager implements Runnable {
             delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
-            // Este sistema asegura que el juego se actualice a una velocidad constante (60
-            // veces por segundo)
             if (delta >= 1) {
                 if (gameState == GameState.JUGANDO) {
-                    // 1. Actualiza toda la lógica (movimiento, IA, etc.)
+                    // 1. Lógica del juego
                     gameController.actualizarJuego();
-                    // 2. Vuelve a dibujar la pantalla con los cambios.
+                    // 2. Redibujar todo en pantalla
                     gamePanel.repaint();
                 }
                 delta--;
