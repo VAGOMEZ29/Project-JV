@@ -6,13 +6,20 @@ import java.util.List;
 
 public class FantasmaAzul extends Fantasma {
 
-    public FantasmaAzul(Point posicion, Image imagen, double velocidad) {
-        super(posicion, imagen, velocidad, EstadoFantasma.NORMAL);
+    private final Point esquinaObjetivo;
+
+    public FantasmaAzul(Point posicion, Image imagen, double velocidad, Laberinto laberinto) {
+        super(posicion, imagen, velocidad);
+        int tile = 32;
+        this.esquinaObjetivo = new Point((laberinto.getColumnas() - 2) * tile, (laberinto.getFilas() - 2) * tile);
     }
 
     @Override
-    public void actualizarMovimiento(PacMan pacman, List<Fantasma> fantasmas, Laberinto laberinto) {
-        // Paso 1: Encontrar al fantasma rojo (Blinky)
+    public Point obtenerObjetivo(PacMan pacman, List<Fantasma> fantasmas, ModoGlobalIA modoGlobal) {
+        if (modoGlobal == ModoGlobalIA.DISPERSAR) {
+            return this.esquinaObjetivo;
+        }
+        // Modo PERSEGUIR:
         Fantasma fantasmaRojo = null;
         for (Fantasma f : fantasmas) {
             if (f instanceof FantasmaRojo) {
@@ -20,29 +27,13 @@ public class FantasmaAzul extends Fantasma {
                 break;
             }
         }
-
-        // Si Blinky no está, Inky se comporta de forma simple (persigue como Blinky)
-        if (fantasmaRojo == null) {
-            Direccion dirSimple = calcularMejorDireccion(pacman.getPosicion(), laberinto);
-            this.mover(dirSimple);
-            return;
-        }
-
-        // Paso 2: Calcular la casilla intermedia (2 casillas delante de Pac-Man)
-        Point posicionIntermedia = new Point(pacman.getPosicion());
-        Direccion dirPacman = pacman.getDireccion();
-        posicionIntermedia.translate(dirPacman.getDx() * 32 * 2, dirPacman.getDy() * 32 * 2);
-
-        // Paso 3: Calcular el vector desde Blinky a la casilla intermedia
+        if (fantasmaRojo == null)
+            return pacman.getPosicion();
+        Point pivote = new Point(pacman.getPosicion());
+        pivote.translate(pacman.getDireccion().getDx() * 64, pacman.getDireccion().getDy() * 64);
         Point posBlinky = fantasmaRojo.getPosicion();
-        int vectorX = posicionIntermedia.x - posBlinky.x;
-        int vectorY = posicionIntermedia.y - posBlinky.y;
-
-        // Paso 4: El objetivo final de Inky es el resultado de ese vector
-        Point objetivoFinal = new Point(posicionIntermedia.x + vectorX, posicionIntermedia.y + vectorY);
-
-        // Calculamos la mejor dirección hacia ese complejo objetivo y nos movemos
-        Direccion nuevaDireccion = calcularMejorDireccion(objetivoFinal, laberinto);
-        this.mover(nuevaDireccion);
+        int vecX = pivote.x - posBlinky.x;
+        int vecY = pivote.y - posBlinky.y;
+        return new Point(pivote.x + vecX, pivote.y + vecY);
     }
 }

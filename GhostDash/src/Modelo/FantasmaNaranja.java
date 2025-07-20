@@ -5,35 +5,26 @@ import java.awt.Point;
 import java.util.List;
 
 public class FantasmaNaranja extends Fantasma {
-    // Distancia (en píxeles) a la que Clyde se "asusta". 8 casillas * 32
-    // píxeles/casilla.
-    private static final int DISTANCIA_HUIDA = 8 * 32;
-    private Point esquinaSeguridad;
 
-    public FantasmaNaranja(Point posicion, Image imagen, double velocidad) {
-        super(posicion, imagen, velocidad, EstadoFantasma.NORMAL);
+    private final Point esquinaObjetivo;
+    private static final int DISTANCIA_HUIDA_SQ = (8 * 32) * (8 * 32);
+
+    public FantasmaNaranja(Point posicion, Image imagen, double velocidad, Laberinto laberinto) {
+        super(posicion, imagen, velocidad);
+        int tile = 32;
+        this.esquinaObjetivo = new Point(1 * tile, (laberinto.getFilas() - 2) * tile);
     }
 
     @Override
-    public void actualizarMovimiento(PacMan pacman, List<Fantasma> fantasmas, Laberinto laberinto) {
-        // La esquina de seguridad de Clyde (abajo a la izquierda)
-        if (esquinaSeguridad == null) {
-            esquinaSeguridad = new Point(0, (laberinto.getDiseno().length - 1) * 32);
+    public Point obtenerObjetivo(PacMan pacman, List<Fantasma> fantasmas, ModoGlobalIA modoGlobal) {
+        if (modoGlobal == ModoGlobalIA.DISPERSAR) {
+            return this.esquinaObjetivo;
         }
-
-        Point objetivo;
-        double distanciaAPacman = this.getPosicion().distance(pacman.getPosicion());
-
-        if (distanciaAPacman > DISTANCIA_HUIDA) {
-            // Si está lejos, persigue a Pac-Man directamente (IA de Blinky)
-            objetivo = pacman.getPosicion();
+        // Modo PERSEGUIR:
+        if (this.getPosicion().distanceSq(pacman.getPosicion()) > DISTANCIA_HUIDA_SQ) {
+            return pacman.getPosicion();
         } else {
-            // Si está cerca, huye a su esquina
-            objetivo = esquinaSeguridad;
+            return this.esquinaObjetivo;
         }
-
-        // Calculamos la mejor dirección y nos movemos
-        Direccion nuevaDireccion = calcularMejorDireccion(objetivo, laberinto);
-        this.mover(nuevaDireccion);
     }
 }

@@ -1,143 +1,137 @@
 package controlador;
 
+import modelo.CategoriaJuego;
 import vista.GamePanel;
 import vista.MenuPrincipal;
-import modelo.*;
-
 import javax.swing.*;
+import java.awt.Color;
 
-/**
- * GameManager es la clase principal que controla el flujo general de la aplicación.
- * Gestiona los estados del juego (menú, jugando), la ventana,
- * y el hilo principal del juego (Game Loop).
- */
-public class GameManager implements Runnable {
+public class GameManager {
 
     private JFrame ventana;
     private GamePanel gamePanel;
     private MenuPrincipal menuPrincipal;
     private GameController gameController;
-    private SoundManager soundManager = new SoundManager();
+    private final SoundManager soundManager = new SoundManager();
+    private Timer gameLoop;
+    private GameState gameState;
+    private final int FPS = 60;
 
-    private Thread gameThread;
-    private volatile GameState gameState; // 'volatile' asegura visibilidad entre hilos
-
-    private final int FPS = 60; // Fotogramas por segundo
-
-    /**
-     * Constructor: al iniciar la aplicación, se muestra el menú principal.
-     */
     public GameManager() {
-        mostrarMenu(); // En vez de iniciar el juego directamente
+        mostrarMenu();
     }
 
-    /**
-     * Muestra el menú principal y prepara los botones de acción.
-     */
     public void mostrarMenu() {
-        gameState = GameState.MENU_PRINCIPAL;
-
-        // Asegúrate de que esté inicializado antes
-        if (soundManager == null) {
-            soundManager = new SoundManager();
-        }
-
-        // Inicia música de fondo del menú
+        setEstado(GameState.MENU_PRINCIPAL);
+        if (gameLoop != null)
+            gameLoop.stop();
         soundManager.reproducirMusicaFondo("pacman_inicio.wav");
-
         menuPrincipal = new MenuPrincipal(e -> {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
                 String categoria = menuPrincipal.getCategoriaSeleccionada();
-                System.out.println("Categoría seleccionada: " + categoria);
-
-                gameController = new GameController();
-
+                gameController = new GameController(this);
                 if (categoria.equalsIgnoreCase("Mejorado")) {
                     gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
                 } else {
                     gameController.setCategoria(CategoriaJuego.CLASICO);
                 }
-
-                // Detiene música del menú al iniciar el juego
                 soundManager.detenerMusicaFondo();
                 iniciarJuego();
-
             } else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
-                JOptionPane.showMessageDialog(ventana,
-                        "Controles:\n← ↑ → ↓ para mover a Pac-Man.\nCome todos los puntos para ganar.\nEvita los fantasmas (a menos que tengas un Power-Up).\n\nModos:\nClásico: experiencia original.\nMejorado: incluye mejoras gráficas e IA.\nMultijugador: (próximamente)",
-                        "Instrucciones", JOptionPane.INFORMATION_MESSAGE);
+                String instrucciones = """
+                        ¡Bienvenido a GhostDash!
 
-            } else if (e.getSource() == menuPrincipal.getBtnSalir()) {
+                        --- CONTROLES ---
+                        - Usa las Flechas del Teclado para mover a Pac-Man.
+                        - Presiona 'P' durante el juego para pausar.
+
+                        --- OBJETIVO ---
+                        Come todos los puntos amarillos del laberinto para pasar de nivel.
+                        ¡Evita que los fantasmas te atrapen!
+
+                        --- MODOS DE JUEGO ---
+                        - Clásico: La experiencia original de Pac-Man.
+                        - Mejorado: Incluye nuevos Power-Ups y una IA de fantasmas mejorada.
+                        - Multijugador: (¡Próximamente!)
+
+                        ¡Buena suerte!
+                        """;
+                JOptionPane.showMessageDialog(ventana,
+                        instrucciones,
+                        "Instrucciones",
+                        JOptionPane.INFORMATION_MESSAGE,
+                        null); // El 'null' es para el ícono por defecto
+            }
+            // Botón SALIR
+            else if (e.getSource() == menuPrincipal.getBtnSalir()) {
                 System.exit(0);
             }
         });
-
         crearVentanaConPanel(menuPrincipal);
     }
 
-    /**
-     * Prepara e inicia una nueva sesión de juego.
-     */
     public void iniciarJuego() {
-        System.out.println("Cambiando a estado: JUGANDO");
-        gameState = GameState.JUGANDO;
-
+        setEstado(GameState.JUGANDO);
         gamePanel = gameController.prepararJuego();
-
         crearVentanaConPanel(gamePanel);
 
-        gameThread = new Thread(this);
-        gameThread.start();
+        if (gameLoop != null)
+            gameLoop.stop();
+
+        int delay = 1000 / FPS;
+        gameLoop = new Timer(delay, e -> {
+            // --- BUCLE DE JUEGO PRINCIPAL Y DEFINITIVO ---
+
+            if (gameState == GameState.JUGANDO) {
+                // 1. El controlador actualiza la lógica interna de la partida.
+                gameController.actualizarJuego();
+
+                // 2. La vista actualiza su HUD (puntos, vidas).
+                gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas());
+
+                // 3. El JEFE (GameManager) pregunta si el juego terminó.
+                if (gameController.isGameOver()) {
+                    gameLoop.stop(); // Detiene el juego inmediatamente.
+                    setEstado(GameState.GAME_OVER);
+                    gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
+                    gamePanel.mostrarBotonReiniciar();
+                } else if (gameController.isGameWon()) {
+                    gameLoop.stop();
+                    setEstado(GameState.GAME_OVER); // Usamos GAME_OVER para detener el bucle
+                    gamePanel.mostrarPantallaFinal("¡Has Ganado!", Color.GREEN);
+                    gamePanel.mostrarBotonReiniciar();
+                }
+            }
+            // Siempre redibujamos el panel, sin importar el estado.
+            gamePanel.repaint();
+        });
+        gameLoop.start();
     }
 
-    /**
-     * Crea una ventana nueva (JFrame) y añade el panel recibido.
-     * Reutilizable tanto para menú como para juego.
-     *
-     * @param panel El panel que se desea mostrar (menú o juego).
-     */
-    private void crearVentanaConPanel(JPanel panel) {
-        if (ventana != null) {
-            ventana.dispose(); // Cerramos la ventana anterior si existe
-        }
+    public void togglePause() {
+        if (gameState == GameState.JUGANDO)
+            setEstado(GameState.PAUSA);
+        else if (gameState == GameState.PAUSA)
+            setEstado(GameState.JUGANDO);
+    }
 
+    private void crearVentanaConPanel(JPanel panel) {
+        if (ventana != null)
+            ventana.dispose();
         ventana = new JFrame("GhostDash");
         ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         ventana.setResizable(false);
         ventana.add(panel);
-        ventana.pack(); // Ajusta el tamaño al contenido del panel
-        ventana.setLocationRelativeTo(null); // Centra la ventana en la pantalla
+        ventana.pack();
+        ventana.setLocationRelativeTo(null);
         ventana.setVisible(true);
-        panel.requestFocusInWindow(); // Necesario para capturar teclas
+        panel.requestFocusInWindow();
     }
 
-    /**
-     * Este es el corazón del juego. El bucle se ejecuta continuamente
-     * mientras el hilo del juego esté activo.
-     */
-    @Override
-    public void run() {
-        // Intervalo de tiempo para dibujar a 60 FPS
-        double drawInterval = 1000000000.0 / FPS;
-        double delta = 0;
-        long lastTime = System.nanoTime();
-        long currentTime;
-
-        while (gameThread != null) {
-
-            currentTime = System.nanoTime();
-            delta += (currentTime - lastTime) / drawInterval;
-            lastTime = currentTime;
-
-            if (delta >= 1) {
-                if (gameState == GameState.JUGANDO) {
-                    // 1. Lógica del juego
-                    gameController.actualizarJuego();
-                    // 2. Redibujar todo en pantalla
-                    gamePanel.repaint();
-                }
-                delta--;
-            }
+    public void setEstado(GameState estado) {
+        this.gameState = estado;
+        if (gamePanel != null) {
+            gamePanel.setEstadoJuego(estado); // Informamos al panel para que dibuje la pausa, etc.
         }
     }
 }

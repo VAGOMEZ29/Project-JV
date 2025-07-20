@@ -20,15 +20,13 @@ public class Nivel {
 
         String ruta = "/resources/niveles/nivel" + numero + ".txt";
 
-        try {
-            URL url = Nivel.class.getResource(ruta);
-            if (url == null) {
+        try (InputStream is = Nivel.class.getResourceAsStream(ruta);
+                BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+
+            if (is == null) {
                 System.err.println("No se encontró el archivo del nivel: " + ruta);
                 return null;
             }
-
-            InputStream is = url.openStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
             List<char[]> filas = new ArrayList<>();
             String linea;
@@ -37,27 +35,35 @@ public class Nivel {
             }
 
             char[][] diseno = new char[filas.size()][];
-            for (int i = 0; i < filas.size(); i++) {
-                diseno[i] = filas.get(i);
-            }
-
+            filas.toArray(diseno);
             laberinto.setDiseno(diseno);
 
             for (int f = 0; f < diseno.length; f++) {
-                for (int c = 0; c < diseno[0].length; c++) {
+                for (int c = 0; c < diseno[f].length; c++) {
                     char ch = diseno[f][c];
                     Point posicion = new Point(c * 32, f * 32);
 
                     switch (ch) {
                         case 'P' -> pacman = new PacMan(posicion);
-                        case 'r' -> fantasmas.add(new FantasmaRojo(posicion, cargarImagen("redGhost.png"), 1.0));
-                        case 'p' -> fantasmas.add(new FantasmaRosa(posicion, cargarImagen("pinkGhost.png"), 1.0));
-                        case 'b' -> fantasmas.add(new FantasmaAzul(posicion, cargarImagen("blueGhost.png"), 1.0));
-                        case 'o' -> fantasmas.add(new FantasmaNaranja(posicion, cargarImagen("orangeGhost.png"), 1.0));
+
+                        // --- AQUÍ ESTÁ EL CAMBIO ---
+                        // Ahora pasamos el objeto 'laberinto' al constructor de cada fantasma.
+                        case 'r' ->
+                            fantasmas.add(new FantasmaRojo(posicion, cargarImagen("redGhost.png"), 2.0, laberinto));
+                        case 'p' ->
+                            fantasmas.add(new FantasmaRosa(posicion, cargarImagen("pinkGhost.png"), 2.0, laberinto));
+                        case 'b' ->
+                            fantasmas.add(new FantasmaAzul(posicion, cargarImagen("blueGhost.png"), 2.0, laberinto));
+                        case 'o' -> fantasmas
+                                .add(new FantasmaNaranja(posicion, cargarImagen("orangeGhost.png"), 2.0, laberinto));
+
                         case 'f' -> {
                             if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
-                                System.out.println("powerup cargado en"+ posicion);
-                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood.png"), TipoPowerUp.INVENCIBILIDAD, 5000));
+                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood.png"),
+                                        TipoPowerUp.INVENCIBILIDAD, 5000));
+                            } else {
+                                // Si no es mejorado, el power-up es solo un punto normal
+                                puntos.add(new Punto(posicion, 10));
                             }
                         }
                         case 'F' -> frutas.add(new Fruta(posicion, cargarImagen("cherry.png"), 100, 5000));
@@ -65,12 +71,10 @@ public class Nivel {
                     }
                 }
             }
-
-            br.close();
-
         } catch (Exception e) {
             System.err.println("Error cargando nivel desde archivo: " + e.getMessage());
             e.printStackTrace();
+            return null;
         }
 
         return new NivelInfo(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
@@ -78,10 +82,9 @@ public class Nivel {
 
     private static Image cargarImagen(String nombreArchivo) {
         try {
-            String ruta = "/resources/imgs/" + nombreArchivo;
-            URL url = Nivel.class.getResource(ruta);
+            URL url = Nivel.class.getResource("/resources/imgs/" + nombreArchivo);
             if (url == null) {
-                System.err.println("No se encontró la imagen: " + ruta);
+                System.err.println("No se encontró la imagen: " + nombreArchivo);
                 return null;
             }
             return new ImageIcon(url).getImage();
