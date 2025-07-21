@@ -9,6 +9,7 @@ import java.util.List;
 
 public class GameController {
 
+    // --- Variables de la clase (sin cambios) ---
     private GamePanel vista;
     private Laberinto laberinto;
     private PacMan pacman;
@@ -50,7 +51,72 @@ public class GameController {
         }
     }
 
+    // --- CAMBIO #1: NUEVO MÉTODO PARA LA CARGA COMPLETA ---
+    /**
+     * Carga un nivel desde archivo y prepara una nueva partida.
+     * Esto se usa al iniciar el juego y al pasar de nivel.
+     */
+    private void cargarNivelYPrepararPartida() {
+        cargarLaberintoYElementos();
+
+        // Si la vista ya existe, actualiza sus referencias. Si no, prepararJuego() la
+        // creará.
+        if (vista != null) {
+            vista.setPacMan(pacman);
+            vista.setFantasmas(fantasmas);
+            vista.setFrutas(frutas);
+            vista.setPuntos(puntos);
+            vista.setPowerUps(powerUps);
+            vista.setLaberinto(laberinto);
+            vista.inicializarControles(pacman);
+        }
+
+        iniciarCicloIAFantasmas();
+    }
+
+    // --- CAMBIO #2: `reiniciarPosiciones` ahora es mucho más simple ---
+    /**
+     * Reinicia SOLO las posiciones de los personajes.
+     * Ya no recarga todo el nivel, por lo que los puntos comidos no reaparecerán.
+     */
+    public void reiniciarPosiciones() {
+        // Reposiciona a Pac-Man y resetea su movimiento.
+        pacman.setPosicion(pacman.getPosicionInicial());
+        pacman.setDireccion(Direccion.NINGUNA);
+        pacman.setDireccionDeseada(Direccion.NINGUNA);
+
+        // Reposiciona a los fantasmas.
+        for (Fantasma f : fantasmas) {
+            f.reiniciar();
+        }
+
+        // Reinicia el ciclo de la IA.
+        iniciarCicloIAFantasmas();
+    }
+
+    // --- CAMBIO #3: `pasarDeNivel` ahora usa el nuevo método ---
+    private void pasarDeNivel() {
+        nivelActual++;
+        // Al pasar de nivel, sí queremos una recarga completa.
+        cargarNivelYPrepararPartida();
+    }
+
+    // --- CAMBIO #4: `prepararJuego` ahora usa el nuevo método ---
+    public GamePanel prepararJuego() {
+        // Carga el nivel 1 por primera vez.
+        cargarNivelYPrepararPartida();
+
+        // Crea la vista por primera vez.
+        vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
+        vista.setGameManager(this.gameManager);
+        vista.inicializarControles(pacman);
+        vista.setReiniciarListener(this::reiniciarJuegoDesdeInterfaz);
+
+        return vista;
+    }
+
     private boolean procesarInteracciones() {
+        // 1. Colisión con fantasmas (la más importante, va primero)
         for (Fantasma fantasma : fantasmas) {
             if (pacman.getPosicion().equals(fantasma.getPosicion())) {
                 if (pacmanInvencible) {
@@ -63,6 +129,8 @@ public class GameController {
                 }
             }
         }
+
+        // 2. Comer puntos
         puntos.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
                 puntuacion += 10;
@@ -71,6 +139,8 @@ public class GameController {
             }
             return false;
         });
+
+        // 3. Comer Power-Ups
         powerUps.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
                 puntuacion += 50;
@@ -79,40 +149,24 @@ public class GameController {
             }
             return false;
         });
-        return false;
+
+        // 4. Comer Frutas (¡LA PARTE NUEVA!)
+        frutas.removeIf(fruta -> {
+            if (pacman.getPosicion().equals(fruta.getPosicion())) {
+                puntuacion += 100; // Puedes ajustar este valor
+                soundManager.reproducirComer();
+                return true;
+            }
+            return false;
+        });
+
+        return false; // No hubo muerte
     }
 
     public void restarVida() {
         this.vidas--;
     }
 
-    /**
-     * ¡LA SOLUCIÓN! Este método ahora recarga TODO el nivel para garantizar un
-     * estado limpio.
-     * Es la forma más robusta de reiniciar.
-     */
-    public void reiniciarPosiciones() {
-        cargarLaberintoYElementos();
-
-        // Actualizamos la vista con las NUEVAS instancias de los objetos.
-        vista.setPacMan(pacman);
-        vista.setFantasmas(fantasmas);
-        vista.setFrutas(frutas);
-        vista.setPuntos(puntos);
-        vista.setPowerUps(powerUps);
-        vista.setLaberinto(laberinto);
-
-        vista.inicializarControles(pacman);
-        iniciarCicloIAFantasmas();
-    }
-
-    private void pasarDeNivel() {
-        nivelActual++;
-        reiniciarPosiciones(); // Pasar de nivel es lo mismo que reiniciar, pero con un número de nivel
-                               // diferente.
-    }
-
-    // --- El resto de tus métodos (mover, preparar, etc. sin cambios) ---
     private void moverPacMan() {
         if (pacman.puedeMoverseAhora()) {
             Point pos = pacman.getPosicion();
@@ -175,16 +229,6 @@ public class GameController {
         if (cicloIATimer != null)
             cicloIATimer.stop();
         gameManager.mostrarMenu();
-    }
-
-    public GamePanel prepararJuego() {
-        cargarLaberintoYElementos();
-        vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
-        vista.setGameManager(this.gameManager);
-        vista.inicializarControles(pacman);
-        vista.setReiniciarListener(this::reiniciarJuegoDesdeInterfaz);
-        iniciarCicloIAFantasmas();
-        return vista;
     }
 
     private void cargarLaberintoYElementos() {
