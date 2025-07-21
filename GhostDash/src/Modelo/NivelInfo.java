@@ -1,5 +1,6 @@
 package modelo;
 
+import java.awt.Point;
 import java.util.List;
 
 /**
@@ -7,7 +8,8 @@ import java.util.List;
  * Esta clase fue creada para agrupar todos los elementos necesarios para
  * cargar un nivel completo de forma ordenada y estructurada.
  * En lugar de devolver cada objeto (laberinto, PacMan, fantasmas, etc.)
- * por separado, ahora se encapsulan dentro de una sola instancia de `NivelInfo`.
+ * por separado, ahora se encapsulan dentro de una sola instancia de
+ * `NivelInfo`.
  */
 public class NivelInfo {
 
@@ -19,19 +21,26 @@ public class NivelInfo {
     private List<Punto> puntos;
     private List<PowerUp> powerUps;
 
-     //Recibe todos los elementos del nivel como parámetros y los almacena.
+    private Point posicionFruta; // ¡NUEVO CAMPO!
+
+    // Recibe todos los elementos del nivel como parámetros y los almacena.
     public NivelInfo(Laberinto laberinto, PacMan pacman,
-                     List<Fantasma> fantasmas, List<Fruta> frutas,
-                     List<Punto> puntos, List<PowerUp> powerUps) {
+            List<Fantasma> fantasmas, List<Fruta> frutas,
+            List<Punto> puntos, List<PowerUp> powerUps, Point posicionFruta) {
         this.laberinto = laberinto;
         this.pacman = pacman;
         this.fantasmas = fantasmas;
         this.frutas = frutas;
         this.puntos = puntos;
         this.powerUps = powerUps;
+        this.posicionFruta = posicionFruta;
     }
 
     // Métodos getters para acceder a cada elemento del nivel:
+
+    public Point getPosicionFruta() {
+        return posicionFruta;
+    }
 
     public Laberinto getLaberinto() {
         return laberinto;

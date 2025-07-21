@@ -33,6 +33,8 @@ public class Nivel {
         Laberinto laberinto = new Laberinto();
         PacMan pacman = null;
 
+        Point posicionAparicionFruta = null;
+
         // Construimos la ruta al archivo de nivel dentro de la carpeta de recursos.
         String ruta = "/resources/niveles/nivel" + numero + ".txt";
 
@@ -81,8 +83,8 @@ public class Nivel {
                         case 'f' -> powerUps.add(new PowerUp(posicion, cargarImagen("powerFood.png"),
                                 TipoPowerUp.INVENCIBILIDAD, 5000));
 
-                        // Creación de Frutas.
-                        case 'F' -> frutas.add(new Fruta(posicion, cargarImagen("cherry.png"), 100, 5000));
+                        // Ya no creamos una fruta, solo guardamos su posición.
+                        case 'F' -> posicionAparicionFruta = posicion;
 
                         // Creación de Puntos normales.
                         case '.', 'O' -> puntos.add(new Punto(posicion, 10));
@@ -97,7 +99,7 @@ public class Nivel {
 
         // Encapsulamos todos los elementos cargados en un objeto NivelInfo y lo
         // devolvemos.
-        return new NivelInfo(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
+        return new NivelInfo(laberinto, pacman, fantasmas, frutas, puntos, powerUps, posicionAparicionFruta);
     }
 
     /**
@@ -106,7 +108,7 @@ public class Nivel {
      * @param nombreArchivo El nombre del archivo de imagen (ej. "pacmanRight.png").
      * @return un objeto Image, o null si la imagen no se encuentra.
      */
-    private static Image cargarImagen(String nombreArchivo) {
+    public static Image cargarImagen(String nombreArchivo) {
         try {
             URL url = Nivel.class.getResource("/resources/imgs/" + nombreArchivo);
             if (url == null) {
