@@ -22,4 +22,9 @@ public class FantasmaRojo extends Fantasma {
         // Modo PERSEGUIR:
         return pacman.getPosicion();
     }
+
+    @Override
+    public int getPrioridad() {
+        return 1;
+    }
 }

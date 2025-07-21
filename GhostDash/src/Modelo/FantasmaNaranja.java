@@ -27,4 +27,9 @@ public class FantasmaNaranja extends Fantasma {
             return this.esquinaObjetivo;
         }
     }
+
+    @Override
+    public int getPrioridad() {
+        return 4;
+    }
 }

@@ -101,6 +101,7 @@ public class GamePanel extends JPanel {
                 }
             }
         });
+        requestFocusInWindow();
     }
 
     // --- Métodos de Control desde el GameManager ---

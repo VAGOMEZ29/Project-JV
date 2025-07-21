@@ -2,6 +2,7 @@ package modelo;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Fantasma extends Personaje {
@@ -25,80 +26,101 @@ public abstract class Fantasma extends Personaje {
         super(posicion, imagen, velocidad);
         this.velocidadBase = velocidad;
         this.posicionInicial = new Point(posicion);
+        this.setDireccion(Direccion.IZQUIERDA);
     }
 
+    // En la clase Fantasma.java
     public void decidirSiguienteDireccion(PacMan pacman, List<Fantasma> fantasmas, Laberinto laberinto,
             ModoGlobalIA modoGlobal) {
         Point posActual = this.getPosicion();
-        if (posActual.x % 32 != 0 || posActual.y % 32 != 0)
-            return;
 
-        // Lógica de HUÍDA anula todo lo demás
+        // Solo tomar decisiones cuando esté perfectamente alineado en una celda.
+        if (posActual.x % 32 != 0 || posActual.y % 32 != 0) {
+            return;
+        }
+
+        // Si el fantasma está huyendo, su lógica es diferente y anula todo lo demás.
         if (this.estado == EstadoFantasma.HUIDA || this.estado == EstadoFantasma.PARPADEANDO) {
-            Point objetivo = new Point((int) (Math.random() * laberinto.getColumnas() * 32),
-                    (int) (Math.random() * laberinto.getFilas() * 32));
-            calcularMejorGiroEnInterseccion(objetivo, laberinto, true); // En modo huida, sí puede dar la vuelta.
+            // En una intersección, elige un camino al azar para parecer perdido.
+            if (laberinto.esInterseccion(posActual)) {
+                calcularMejorGiroEnInterseccion(new Point(-1, -1), laberinto, true); // Target inválido para
+                                                                                     // aleatoriedad
+            }
+            // Si no es una intersección, gestiona giros en esquinas y callejones sin
+            // salida.
+            else if (!laberinto.puedeMover(posActual, this.getDireccion())) {
+                calcularMejorGiroEnInterseccion(new Point(-1, -1), laberinto, true);
+            }
             return;
         }
 
-        // Lógica para modos NORMALES (Perseguir / Dispersar)
-        if (laberinto.esInterseccion(posActual)) {
+        // --- Lógica para modos NORMALES (Perseguir / Dispersar) ---
+
+        // Si el fantasma llega a una intersección O a un callejón/esquina donde no
+        // puede seguir recto,
+        // debe tomar una decisión.
+        if (laberinto.esInterseccion(posActual) || !laberinto.puedeMover(posActual, this.getDireccion())) {
             Point objetivo = obtenerObjetivo(pacman, fantasmas, modoGlobal);
-            calcularMejorGiroEnInterseccion(objetivo, laberinto, false); // En modo normal, no puede dar la vuelta.
-        } else {
-            // Lógica de PASILLO
-            if (!laberinto.puedeMover(posActual, this.getDireccion())) {
-                // Si choca, debe encontrar la única otra salida posible que no sea hacia atrás
-                // (una curva).
-                // Si no hay curvas, la única opción será dar la vuelta.
-                for (Direccion nuevaDir : Direccion.values()) {
-                    if (nuevaDir != Direccion.NINGUNA && nuevaDir != this.getDireccion().invertir()) {
-                        if (laberinto.puedeMover(posActual, nuevaDir)) {
-                            this.setDireccion(nuevaDir);
-                            return; // Encontró la curva.
-                        }
-                    }
-                }
-                // Si el bucle no encontró una curva, es un callejón sin salida. Forzar la
-                // vuelta.
-                this.setDireccion(this.getDireccion().invertir());
-            }
-            // Si puede seguir recto, no hace nada, mantiene su dirección.
+            calcularMejorGiroEnInterseccion(objetivo, laberinto, false); // No puede dar la vuelta.
         }
+        // Si no se cumple la condición, significa que está en un pasillo y puede seguir
+        // recto,
+        // por lo que no hace falta hacer nada y mantiene su dirección actual.
     }
 
-    private void calcularMejorGiroEnInterseccion(Point objetivo, Laberinto laberinto, boolean puedeInvertir) {
+    private void calcularMejorGiroEnInterseccion(Point objetivo, Laberinto laberinto, boolean esHuida) {
         Point posActual = this.getPosicion();
         Direccion dirActual = this.getDireccion();
-        Direccion mejorDireccion = dirActual.invertir();
+        Direccion mejorDireccion = dirActual.invertir(); // Dirección por defecto si todo falla
         double distanciaMinima = Double.MAX_VALUE;
+        List<Direccion> opciones = new ArrayList<>();
 
         for (Direccion dir : Direccion.values()) {
             if (dir == Direccion.NINGUNA)
                 continue;
-            // La única dirección prohibida es la inversa, A MENOS que se esté en modo
-            // huida.
-            if (!puedeInvertir && dir == dirActual.invertir())
+            // La única dirección prohibida es la inversa, a menos que esté huyendo.
+            if (!esHuida && dir == dirActual.invertir())
                 continue;
 
             if (laberinto.puedeMover(posActual, dir)) {
-                Point posFutura = new Point(posActual.x + dir.getDx() * 32, posActual.y + dir.getDy() * 32);
-                double distancia = posFutura.distanceSq(objetivo);
-                if (distancia < distanciaMinima) {
-                    distanciaMinima = distancia;
-                    mejorDireccion = dir;
+                if (esHuida) {
+                    opciones.add(dir); // En huida, todas las opciones válidas son candidatas
+                } else {
+                    Point posFutura = new Point(posActual.x + dir.getDx() * 32, posActual.y + dir.getDy() * 32);
+                    double distancia = posFutura.distanceSq(objetivo);
+                    if (distancia < distanciaMinima) {
+                        distanciaMinima = distancia;
+                        mejorDireccion = dir;
+                    }
                 }
             }
         }
-        this.setDireccion(mejorDireccion);
+
+        if (esHuida) {
+            // Elige una dirección aleatoria de las disponibles para parecer errático
+            if (!opciones.isEmpty()) {
+                this.setDireccion(opciones.get((int) (Math.random() * opciones.size())));
+            } else {
+                this.setDireccion(mejorDireccion); // Fallback: si está atrapado, da la vuelta
+            }
+        } else {
+            this.setDireccion(mejorDireccion);
+        }
     }
 
     public abstract Point obtenerObjetivo(PacMan pacman, List<Fantasma> fantasmas, ModoGlobalIA modoGlobal);
 
+    // En la clase: Fantasma.java
+
     public void reiniciar() {
         this.posicion = new Point(this.posicionInicial);
         this.estado = EstadoFantasma.NORMAL;
-        this.setDireccion(Direccion.aleatoria());
+        this.setDireccion(Direccion.IZQUIERDA);
+
+        // ¡LA LÍNEA QUE FALTABA!
+        // Reseteamos el temporizador para que el fantasma no se mueva inmediatamente al
+        // reanudarse el juego.
+        resetearTemporizadorMovimiento();
     }
 
     public void activarHuida(long duracionMs) {
@@ -120,6 +142,8 @@ public abstract class Fantasma extends Personaje {
             }
         }
     }
+
+    public abstract int getPrioridad();
 
     @Override
     public void dibujar(Graphics g) {
@@ -146,6 +170,12 @@ public abstract class Fantasma extends Personaje {
 
     public Point getPosicionInicial() {
         return posicionInicial;
+    }
+
+    public Point getProximaPosicion() {
+        Point proxima = new Point(this.posicion);
+        proxima.translate(this.direccion.getDx() * 32, this.direccion.getDy() * 32);
+        return proxima;
     }
 
     @Override

@@ -1,6 +1,6 @@
+// En GameState.java
 package controlador;
 
 public enum GameState {
-    MENU_PRINCIPAL, JUGANDO, PAUSA, GAME_OVER, RANKINGS;
-
+    MENU_PRINCIPAL, JUGANDO, PAUSA, VIDA_PERDIDA, GAME_OVER, RANKINGS;
 }

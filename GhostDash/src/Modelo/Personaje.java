@@ -94,4 +94,8 @@ public abstract class Personaje extends ElementoJuego {
     public void setDireccion(Direccion direccion) {
         this.direccion = direccion;
     }
+
+    public void resetearTemporizadorMovimiento() {
+        this.tiempoUltimoMovimiento = System.nanoTime();
+    }
 }

@@ -36,4 +36,9 @@ public class FantasmaAzul extends Fantasma {
         int vecY = pivote.y - posBlinky.y;
         return new Point(pivote.x + vecX, pivote.y + vecY);
     }
+
+    @Override
+    public int getPrioridad() {
+        return 2;
+    }
 }

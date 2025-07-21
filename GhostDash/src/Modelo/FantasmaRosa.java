@@ -25,4 +25,9 @@ public class FantasmaRosa extends Fantasma {
         objetivo.translate(pacman.getDireccion().getDx() * offset, pacman.getDireccion().getDy() * offset);
         return objetivo;
     }
+
+    @Override
+    public int getPrioridad() {
+        return 2;
+    }
 }

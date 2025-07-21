@@ -3,6 +3,7 @@ package controlador;
 import modelo.CategoriaJuego;
 import vista.GamePanel;
 import vista.MenuPrincipal;
+
 import javax.swing.*;
 import java.awt.Color;
 
@@ -16,6 +17,7 @@ public class GameManager {
     private Timer gameLoop;
     private GameState gameState;
     private final int FPS = 60;
+    private boolean procesandoMuerte = false;
 
     public GameManager() {
         mostrarMenu();
@@ -26,6 +28,7 @@ public class GameManager {
         if (gameLoop != null)
             gameLoop.stop();
         soundManager.reproducirMusicaFondo("pacman_inicio.wav");
+
         menuPrincipal = new MenuPrincipal(e -> {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
                 String categoria = menuPrincipal.getCategoriaSeleccionada();
@@ -37,7 +40,9 @@ public class GameManager {
                 }
                 soundManager.detenerMusicaFondo();
                 iniciarJuego();
-            } else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
+            }
+            // ¡LÓGICA DE INSTRUCCIONES RESTAURADA!
+            else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
                 String instrucciones = """
                         ¡Bienvenido a GhostDash!
 
@@ -60,10 +65,8 @@ public class GameManager {
                         instrucciones,
                         "Instrucciones",
                         JOptionPane.INFORMATION_MESSAGE,
-                        null); // El 'null' es para el ícono por defecto
-            }
-            // Botón SALIR
-            else if (e.getSource() == menuPrincipal.getBtnSalir()) {
+                        null);
+            } else if (e.getSource() == menuPrincipal.getBtnSalir()) {
                 System.exit(0);
             }
         });
@@ -80,32 +83,43 @@ public class GameManager {
 
         int delay = 1000 / FPS;
         gameLoop = new Timer(delay, e -> {
-            // --- BUCLE DE JUEGO PRINCIPAL Y DEFINITIVO ---
-
             if (gameState == GameState.JUGANDO) {
-                // 1. El controlador actualiza la lógica interna de la partida.
                 gameController.actualizarJuego();
-
-                // 2. La vista actualiza su HUD (puntos, vidas).
                 gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas());
-
-                // 3. El JEFE (GameManager) pregunta si el juego terminó.
-                if (gameController.isGameOver()) {
-                    gameLoop.stop(); // Detiene el juego inmediatamente.
-                    setEstado(GameState.GAME_OVER);
-                    gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
-                    gamePanel.mostrarBotonReiniciar();
-                } else if (gameController.isGameWon()) {
-                    gameLoop.stop();
-                    setEstado(GameState.GAME_OVER); // Usamos GAME_OVER para detener el bucle
-                    gamePanel.mostrarPantallaFinal("¡Has Ganado!", Color.GREEN);
-                    gamePanel.mostrarBotonReiniciar();
-                }
             }
-            // Siempre redibujamos el panel, sin importar el estado.
             gamePanel.repaint();
         });
         gameLoop.start();
+    }
+
+    public void notificarMuerteDePacman() {
+        if (procesandoMuerte)
+            return;
+
+        this.procesandoMuerte = true;
+        gameLoop.stop();
+        soundManager.reproducirEfecto("pacman_muerto.wav");
+        gameController.restarVida();
+
+        if (gameController.isGameOver()) {
+            setEstado(GameState.GAME_OVER);
+            gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
+            gamePanel.mostrarBotonReiniciar();
+        } else {
+            setEstado(GameState.VIDA_PERDIDA);
+            gestionarPausaYReinicio();
+        }
+    }
+
+    private void gestionarPausaYReinicio() {
+        Timer pausaTimer = new Timer(2000, e -> {
+            gameController.reiniciarPosiciones();
+            setEstado(GameState.JUGANDO);
+            this.procesandoMuerte = false;
+            gameLoop.start();
+        });
+        pausaTimer.setRepeats(false);
+        pausaTimer.start();
     }
 
     public void togglePause() {
@@ -113,6 +127,12 @@ public class GameManager {
             setEstado(GameState.PAUSA);
         else if (gameState == GameState.PAUSA)
             setEstado(GameState.JUGANDO);
+    }
+
+    public void setEstado(GameState estado) {
+        this.gameState = estado;
+        if (gamePanel != null)
+            gamePanel.setEstadoJuego(estado);
     }
 
     private void crearVentanaConPanel(JPanel panel) {
@@ -126,12 +146,5 @@ public class GameManager {
         ventana.setLocationRelativeTo(null);
         ventana.setVisible(true);
         panel.requestFocusInWindow();
-    }
-
-    public void setEstado(GameState estado) {
-        this.gameState = estado;
-        if (gamePanel != null) {
-            gamePanel.setEstadoJuego(estado); // Informamos al panel para que dibuje la pausa, etc.
-        }
     }
 }
