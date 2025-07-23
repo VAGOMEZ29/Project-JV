@@ -178,6 +178,16 @@ public abstract class Fantasma extends Personaje {
         return proxima;
     }
 
+    /**
+     * Devuelve la velocidad base original del fantasma, ignorando cualquier
+     * modificador temporal (como estar en modo huida o usar una habilidad).
+     * 
+     * @return La velocidad base del fantasma.
+     */
+    public double getVelocidadBase() {
+        return this.velocidadBase;
+    }
+
     @Override
     public void mover(Direccion direccion) {
         int paso = 32;

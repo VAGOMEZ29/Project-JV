@@ -23,26 +23,28 @@ public class GamePanel extends JPanel {
     private JButton botonReiniciar;
     private Runnable reiniciarListener;
     private GameManager gameManager;
-
-    // Variables para controlar los mensajes de estado en pantalla
     private boolean mostrarPantallaFinal = false;
     private String mensajeFinal = "";
     private Color colorMensajeFinal = Color.WHITE;
     private GameState estadoJuego = GameState.JUGANDO;
 
+    private CategoriaJuego categoria; // Campo para saber en qué modo estamos
+    private FantasmaJugador fantasmaJugador;
+
     public GamePanel(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
-            List<Fruta> frutas, List<Punto> puntos, List<PowerUp> powerUps) {
+            List<Fruta> frutas, List<Punto> puntos, List<PowerUp> powerUps, CategoriaJuego categoria) { // <-- Parámetro
+                                                                                                        // añadido
         this.laberinto = laberinto;
         this.pacman = pacman;
         this.fantasmas = fantasmas;
         this.frutas = frutas;
         this.puntos = puntos;
         this.powerUps = powerUps;
-
+        this.categoria = categoria; // <-- Asignación
         setPreferredSize(new Dimension(laberinto.getColumnas() * 32, laberinto.getFilas() * 32 + 40));
         setBackground(Color.BLACK);
         setFocusable(true);
-        setLayout(null); // Usamos layout nulo para posicionar el botón manualmente
+        setLayout(null);
         crearBotonReiniciar();
     }
 
@@ -63,7 +65,6 @@ public class GamePanel extends JPanel {
         botonReiniciar.setBorder(BorderFactory.createLineBorder(Color.YELLOW, 2));
         botonReiniciar.addActionListener(e -> {
             if (reiniciarListener != null) {
-                // Ocultamos todo para una transición limpia
                 mostrarPantallaFinal = false;
                 botonReiniciar.setVisible(false);
                 reiniciarListener.run();
@@ -76,11 +77,11 @@ public class GamePanel extends JPanel {
         this.reiniciarListener = listener;
     }
 
-    public void inicializarControles(PacMan pacman) {
-        // Limpiamos listeners antiguos para evitar duplicados al reiniciar
-        for (var kl : getKeyListeners()) {
+    public void inicializarControles(PacMan pacman, FantasmaJugador fantasmaJugador) {
+        this.pacman = pacman;
+        this.fantasmaJugador = fantasmaJugador;
+        for (var kl : getKeyListeners())
             removeKeyListener(kl);
-        }
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -89,49 +90,64 @@ public class GamePanel extends JPanel {
                         gameManager.togglePause();
                     return;
                 }
-                Direccion dir = switch (e.getKeyCode()) {
-                    case KeyEvent.VK_UP, KeyEvent.VK_W -> Direccion.ARRIBA;
-                    case KeyEvent.VK_DOWN, KeyEvent.VK_S -> Direccion.ABAJO;
-                    case KeyEvent.VK_LEFT, KeyEvent.VK_A -> Direccion.IZQUIERDA;
-                    case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> Direccion.DERECHA;
-                    default -> null;
-                };
-                if (dir != null) {
-                    pacman.setDireccionDeseada(dir);
+                // Controles de PAC-MAN (Flechas)
+                if (pacman != null) {
+                    Direccion dirPacman = switch (e.getKeyCode()) {
+                        case KeyEvent.VK_UP -> Direccion.ARRIBA;
+                        case KeyEvent.VK_DOWN -> Direccion.ABAJO;
+                        case KeyEvent.VK_LEFT -> Direccion.IZQUIERDA;
+                        case KeyEvent.VK_RIGHT -> Direccion.DERECHA;
+                        default -> null;
+                    };
+                    if (dirPacman != null)
+                        pacman.setDireccionDeseada(dirPacman);
+                }
+                // Controles del FANTASMA (W-A-S-D y Espacio)
+                if (fantasmaJugador != null) {
+                    Direccion dirFantasma = switch (e.getKeyCode()) {
+                        case KeyEvent.VK_W -> Direccion.ARRIBA;
+                        case KeyEvent.VK_S -> Direccion.ABAJO;
+                        case KeyEvent.VK_A -> Direccion.IZQUIERDA;
+                        case KeyEvent.VK_D -> Direccion.DERECHA;
+                        default -> null;
+                    };
+                    if (dirFantasma != null)
+                        fantasmaJugador.setDireccionDeseada(dirFantasma);
+                    if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        fantasmaJugador.activarAceleron(1.5, 2000);
+                    }
                 }
             }
         });
         requestFocusInWindow();
     }
 
-    // --- Métodos de Control desde el GameManager ---
-
-    public void actualizarHUD(int puntuacion, int vidas) {
+    public void actualizarHUD(int puntuacion, int vidas, CategoriaJuego categoria) { // <-- Parámetro añadido
         this.puntuacion = puntuacion;
         this.vidas = vidas;
+        this.categoria = categoria;
     }
 
     public void mostrarPantallaFinal(String mensaje, Color color) {
         this.mostrarPantallaFinal = true;
         this.mensajeFinal = mensaje;
         this.colorMensajeFinal = color;
-        repaint(); // Forzar redibujado inmediato
+        repaint();
     }
 
     public void mostrarBotonReiniciar() {
         botonReiniciar.setVisible(true);
-        requestFocusInWindow(); // Asegurarse de que el panel pueda recibir clics
+        requestFocusInWindow();
     }
 
     public void setEstadoJuego(GameState estado) {
         this.estadoJuego = estado;
-        // Si el juego se reanuda, nos aseguramos de que la pantalla final esté oculta.
         if (estado == GameState.JUGANDO) {
             this.mostrarPantallaFinal = false;
         }
     }
 
-    // --- Setters para reiniciar el panel con nuevos datos ---
+    // Setters para actualizar las referencias a los objetos del juego.
     public void setPacMan(PacMan p) {
         this.pacman = p;
     }
@@ -160,19 +176,19 @@ public class GamePanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // --- DIBUJO DEL JUEGO BASE ---
+        // Dibujo del laberinto
         if (laberinto != null) {
             for (int fila = 0; fila < laberinto.getFilas(); fila++) {
                 for (int col = 0; col < laberinto.getColumnas(); col++) {
                     if (laberinto.getDiseno()[fila][col] == 'X') {
-                        g.setColor(new Color(25, 25, 166)); // Un azul más oscuro
+                        g.setColor(new Color(25, 25, 166));
                         g.fillRect(col * 32, fila * 32, 32, 32);
                     }
                 }
             }
         }
 
-        // Usamos List.copyOf para evitar ConcurrentModificationException al dibujar
+        // Dibujo de los elementos del juego
         if (puntos != null)
             for (Punto punto : List.copyOf(puntos))
                 punto.dibujar(g);
@@ -188,17 +204,27 @@ public class GamePanel extends JPanel {
             for (Fantasma fantasma : List.copyOf(fantasmas))
                 fantasma.dibujar(g);
 
-        // --- DIBUJO DEL HUD ---
+        // --- DIBUJO DEL HUD (CON LÓGICA ADAPTATIVA) ---
         if (laberinto != null) {
             g.setColor(Color.BLACK);
             g.fillRect(0, laberinto.getFilas() * 32, getWidth(), 40);
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, 18));
-            g.drawString("Puntos: " + puntuacion, 20, laberinto.getFilas() * 32 + 25);
-            g.drawString("Vidas: " + vidas, getWidth() - 100, laberinto.getFilas() * 32 + 25);
+
+            // Si es multijugador, el HUD muestra la información relevante para la partida.
+            if (this.categoria == CategoriaJuego.MULTIJUGADOR) {
+                g.drawString("Puntos Restantes: " + (puntos.size() + powerUps.size()), 20,
+                        laberinto.getFilas() * 32 + 25);
+                g.drawString("Vidas Pac-Man: " + vidas, getWidth() - 180, laberinto.getFilas() * 32 + 25);
+            }
+            // Si es modo clásico/mejorado, muestra la puntuación y las vidas.
+            else {
+                g.drawString("Puntuación: " + puntuacion, 20, laberinto.getFilas() * 32 + 25);
+                g.drawString("Vidas: " + vidas, getWidth() - 100, laberinto.getFilas() * 32 + 25);
+            }
         }
 
-        // --- DIBUJO DE ESTADOS SUPERPUESTOS ---
+        // Dibujo de pantallas superpuestas (Game Over, Pausa)
         if (mostrarPantallaFinal) {
             g.setColor(new Color(0, 0, 0, 180));
             g.fillRect(0, 0, getWidth(), getHeight());

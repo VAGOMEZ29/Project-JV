@@ -31,10 +31,12 @@ public class GameManager {
 
         menuPrincipal = new MenuPrincipal(e -> {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
-                String categoria = menuPrincipal.getCategoriaSeleccionada();
+                String categoriaStr = menuPrincipal.getCategoriaSeleccionada();
                 gameController = new GameController(this);
-                if (categoria.equalsIgnoreCase("Mejorado")) {
+                if (categoriaStr.equalsIgnoreCase("Mejorado")) {
                     gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
+                } else if (categoriaStr.equalsIgnoreCase("Multijugador")) {
+                    gameController.setCategoria(CategoriaJuego.MULTIJUGADOR);
                 } else {
                     gameController.setCategoria(CategoriaJuego.CLASICO);
                 }
@@ -43,20 +45,13 @@ public class GameManager {
             } else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
                 String instrucciones = """
                         ¡Bienvenido a GhostDash!
-
                         --- CONTROLES ---
-                        - Usa las Flechas del Teclado para mover a Pac-Man.
-                        - Presiona 'P' durante el juego para pausar.
-
+                        - Pac-Man (J1): Flechas del Teclado
+                        - Fantasma (J2): W-A-S-D para mover, ESPACIO para acelerar.
+                        - Pausa: P
                         --- OBJETIVO ---
-                        Come todos los puntos amarillos del laberinto para pasar de nivel.
-                        ¡Evita que los fantasmas te atrapen!
-
-                        --- MODOS DE JUEGO ---
-                        - Clásico: La experiencia original de Pac-Man.
-                        - Mejorado: Incluye nuevos Power-Ups y una IA de fantasmas mejorada.
-                        - Multijugador: (¡Próximamente!)
-
+                        - Pac-Man: Come todos los puntos para ganar.
+                        - Fantasma: Atrapa a Pac-Man 3 veces para ganar.
                         ¡Buena suerte!
                         """;
                 JOptionPane.showMessageDialog(ventana, instrucciones, "Instrucciones", JOptionPane.INFORMATION_MESSAGE,
@@ -80,7 +75,14 @@ public class GameManager {
         gameLoop = new Timer(delay, e -> {
             if (gameState == GameState.JUGANDO) {
                 gameController.actualizarJuego();
-                gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas());
+                gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas(),
+                        gameController.getCategoria());
+
+                if (gameController.isGameWon()) {
+                    gestionarVictoria();
+                } else if (gameController.isGameOver()) {
+                    gestionarDerrota();
+                }
             }
             gamePanel.repaint();
         });
@@ -97,9 +99,8 @@ public class GameManager {
         gameController.restarVida();
 
         if (gameController.isGameOver()) {
-            setEstado(GameState.GAME_OVER);
-            gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
-            gamePanel.mostrarBotonReiniciar();
+            // Si es game over, el bucle principal lo detectará.
+            gameLoop.start();
         } else {
             setEstado(GameState.VIDA_PERDIDA);
             gestionarPausaYReinicio();
@@ -115,6 +116,28 @@ public class GameManager {
         });
         pausaTimer.setRepeats(false);
         pausaTimer.start();
+    }
+
+    private void gestionarVictoria() {
+        gameLoop.stop();
+        setEstado(GameState.GAME_OVER);
+        if (gameController.getCategoria() == CategoriaJuego.MULTIJUGADOR) {
+            gamePanel.mostrarPantallaFinal("¡Pac-Man Gana!", Color.GREEN);
+        } else {
+            gamePanel.mostrarPantallaFinal("¡Has Ganado!", Color.GREEN);
+        }
+        gamePanel.mostrarBotonReiniciar();
+    }
+
+    private void gestionarDerrota() {
+        gameLoop.stop();
+        setEstado(GameState.GAME_OVER);
+        if (gameController.getCategoria() == CategoriaJuego.MULTIJUGADOR) {
+            gamePanel.mostrarPantallaFinal("¡Fantasma Gana!", Color.RED);
+        } else {
+            gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
+        }
+        gamePanel.mostrarBotonReiniciar();
     }
 
     public void togglePause() {
