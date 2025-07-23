@@ -40,9 +40,7 @@ public class GameManager {
                 }
                 soundManager.detenerMusicaFondo();
                 iniciarJuego();
-            }
-            // ¡LÓGICA DE INSTRUCCIONES RESTAURADA!
-            else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
+            } else if (e.getSource() == menuPrincipal.getBtnInstrucciones()) {
                 String instrucciones = """
                         ¡Bienvenido a GhostDash!
 
@@ -61,10 +59,7 @@ public class GameManager {
 
                         ¡Buena suerte!
                         """;
-                JOptionPane.showMessageDialog(ventana,
-                        instrucciones,
-                        "Instrucciones",
-                        JOptionPane.INFORMATION_MESSAGE,
+                JOptionPane.showMessageDialog(ventana, instrucciones, "Instrucciones", JOptionPane.INFORMATION_MESSAGE,
                         null);
             } else if (e.getSource() == menuPrincipal.getBtnSalir()) {
                 System.exit(0);

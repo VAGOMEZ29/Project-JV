@@ -7,9 +7,19 @@ import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * GameController es el orquestador principal de la partida.
+ * Gestiona el estado, el flujo del juego, la lógica de los personajes y la IA,
+ * comunicándose con el GameManager para eventos críticos como la muerte de
+ * Pac-Man.
+ */
 public class GameController {
 
-    // --- Variables de la clase (sin cambios) ---
+    // ================================================================================
+    // SECCIÓN: VARIABLES DE ESTADO Y MANAGERS
+    // ================================================================================
+
+    // --- Elementos del Juego y Vista ---
     private GamePanel vista;
     private Laberinto laberinto;
     private PacMan pacman;
@@ -17,42 +27,60 @@ public class GameController {
     private List<Punto> puntos = Collections.emptyList();
     private List<PowerUp> powerUps = Collections.emptyList();
     private List<Fruta> frutas = Collections.emptyList();
+
+    // --- Estado de la Partida ---
     private int puntuacion = 0;
     private int vidas = 3;
     private int nivelActual = 1;
     private CategoriaJuego categoria = CategoriaJuego.CLASICO;
     private boolean pacmanInvencible = false;
-    private final GameManager gameManager;
-    private final SoundManager soundManager = new SoundManager();
-    private ModoGlobalIA modoActualIA;
-    private Timer cicloIATimer;
-    private final int[] duracionesCiclo = { 7000, 20000, 7000, 20000, 5000, 20000, 5000 };
-    private int indiceCicloIA = 0;
 
-    // --- NUEVAS VARIABLES PARA LA LÓGICA DE LA FRUTA ---
+    // --- Lógica de la Fruta ---
     private Point posicionAparicionFruta;
     private int puntosComidosEnNivel;
     private boolean haAparecidoPrimeraFruta;
     private boolean haAparecidoSegundaFruta;
 
+    // --- Lógica de la IA ---
+    private ModoGlobalIA modoActualIA;
+    private Timer cicloIATimer;
+    private final int[] duracionesCiclo = { 7000, 20000, 7000, 20000, 5000, 20000, 5000 };
+    private int indiceCicloIA = 0;
+
+    // --- Managers Externos ---
+    private final GameManager gameManager;
+    private final SoundManager soundManager = new SoundManager();
+
+    /**
+     * Constructor de la clase.
+     * 
+     * @param manager Una referencia al GameManager principal para la comunicación.
+     */
     public GameController(GameManager manager) {
         this.gameManager = manager;
     }
 
+    // ================================================================================
+    // SECCIÓN: BUCLE PRINCIPAL DEL JUEGO
+    // ================================================================================
+
+    /**
+     * Es el método principal del bucle de juego, llamado repetidamente por el
+     * GameManager.
+     * Organiza el orden de los turnos de movimiento y las verificaciones de reglas.
+     */
     public void actualizarJuego() {
-        if (isGameOver() || (puntos.isEmpty() && nivelActual >= 3)) {
+        if (isGameOver() || isGameWon())
             return;
-        }
 
         moverPacMan();
         if (procesarInteracciones())
-            return;
+            return; // Si Pac-Man muere, detenemos el fotograma.
 
         moverFantasmas();
         if (procesarInteracciones())
-            return;
+            return; // Verificamos de nuevo por si un fantasma se movió sobre Pac-Man.
 
-        // Verificamos si la fruta debe aparecer
         verificarAparicionFruta();
 
         if (puntos.isEmpty() && nivelActual < 3) {
@@ -60,154 +88,14 @@ public class GameController {
         }
     }
 
-    private boolean procesarInteracciones() {
-        for (Fantasma fantasma : fantasmas) {
-            if (pacman.getPosicion().equals(fantasma.getPosicion())) {
-                if (pacmanInvencible) {
-                    fantasma.reiniciar();
-                    puntuacion += 200;
-                    soundManager.reproducirEfecto("pacman_comiendoFantasma.wav");
-                } else if (fantasma.getEstado() == EstadoFantasma.NORMAL) {
-                    gameManager.notificarMuerteDePacman();
-                    return true;
-                }
-            }
-        }
-        puntos.removeIf(p -> {
-            if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += 10;
-                puntosComidosEnNivel++; // Incrementamos el contador para la fruta
-                soundManager.reproducirComer();
-                return true;
-            }
-            return false;
-        });
-        powerUps.removeIf(p -> {
-            if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += 50;
-                puntosComidosEnNivel++; // Los Power-Ups también cuentan como puntos comidos
-                activarEfecto(p.getTipo(), p.getDuracion());
-                return true;
-            }
-            return false;
-        });
-        frutas.removeIf(fruta -> {
-            if (pacman.getPosicion().equals(fruta.getPosicion())) {
-                puntuacion += 100;
-                soundManager.reproducirComer();
-                return true;
-            }
-            return false;
-        });
-        return false;
-    }
-
-    // --- NUEVOS MÉTODOS PARA LA FRUTA ---
+    // ================================================================================
+    // SECCIÓN: LÓGICA DE MOVIMIENTO DE PERSONAJES
+    // ================================================================================
 
     /**
-     * Comprueba si se cumplen las condiciones para que aparezca una fruta.
+     * Gestiona el movimiento de Pac-Man basándose en la entrada del usuario y las
+     * reglas del laberinto.
      */
-    private void verificarAparicionFruta() {
-        // Si no hay posición de fruta en este nivel, no hacemos nada.
-        if (posicionAparicionFruta == null)
-            return;
-
-        // Primera fruta: aparece después de 70 puntos comidos.
-        if (!haAparecidoPrimeraFruta && puntosComidosEnNivel >= 70) {
-            haAparecidoPrimeraFruta = true;
-            spawnFruta();
-        }
-
-        // Segunda fruta: aparece después de 170 puntos comidos.
-        if (!haAparecidoSegundaFruta && puntosComidosEnNivel >= 170) {
-            haAparecidoSegundaFruta = true;
-            spawnFruta();
-        }
-    }
-
-    /**
-     * Crea una instancia de Fruta, la añade al juego y programa su desaparición.
-     */
-    private void spawnFruta() {
-        Image imagenFruta = Nivel.cargarImagen("cherry.png"); // Podrías cambiar esto según el nivel
-        Fruta nuevaFruta = new Fruta(posicionAparicionFruta, imagenFruta, 100, 9000);
-        frutas.add(nuevaFruta);
-
-        // Creamos un Timer que se ejecutará UNA VEZ después de 9 segundos.
-        Timer temporizadorFruta = new Timer(9000, e -> {
-            // El código dentro se ejecuta cuando el tiempo termina:
-            frutas.remove(nuevaFruta); // La fruta desaparece.
-        });
-        temporizadorFruta.setRepeats(false);
-        temporizadorFruta.start();
-    }
-
-    /**
-     * Resetea el estado de la aparición de frutas. Esencial para el reinicio y paso
-     * de nivel.
-     */
-    private void resetearEstadoFruta() {
-        this.puntosComidosEnNivel = 0;
-        this.haAparecidoPrimeraFruta = false;
-        this.haAparecidoSegundaFruta = false;
-        frutas.clear(); // Limpiamos cualquier fruta que haya quedado en pantalla
-    }
-
-    // --- MÉTODOS MODIFICADOS ---
-
-    public void reiniciarPosiciones() {
-        resetearEstadoFruta(); // Reseteamos la lógica de la fruta
-        pacman.setPosicion(pacman.getPosicionInicial());
-        pacman.setDireccion(Direccion.NINGUNA);
-        pacman.setDireccionDeseada(Direccion.NINGUNA);
-        for (Fantasma f : fantasmas)
-            f.reiniciar();
-        iniciarCicloIAFantasmas();
-    }
-
-    private void pasarDeNivel() {
-        nivelActual++;
-        cargarNivelYPrepararPartida();
-    }
-
-    private void cargarNivelYPrepararPartida() {
-        cargarLaberintoYElementos();
-        resetearEstadoFruta(); // Reseteamos la lógica de la fruta al cargar un nivel
-
-        if (vista != null) {
-            vista.setPacMan(pacman);
-            vista.setFantasmas(fantasmas);
-            vista.setFrutas(frutas);
-            vista.setPuntos(puntos);
-            vista.setPowerUps(powerUps);
-            vista.setLaberinto(laberinto);
-            vista.inicializarControles(pacman);
-        }
-
-        iniciarCicloIAFantasmas();
-    }
-
-    private void cargarLaberintoYElementos() {
-        NivelInfo nivelInfo = Nivel.cargarNivel(nivelActual, categoria);
-        if (nivelInfo == null)
-            return;
-        this.laberinto = nivelInfo.getLaberinto();
-        this.pacman = nivelInfo.getPacman();
-        this.fantasmas = nivelInfo.getFantasmas();
-        this.frutas = nivelInfo.getFrutas();
-        this.puntos = nivelInfo.getPuntos();
-        this.powerUps = nivelInfo.getPowerUps();
-        this.posicionAparicionFruta = nivelInfo.getPosicionFruta(); // Guardamos la posición
-        if (pacman != null)
-            pacman.setDireccion(Direccion.NINGUNA);
-    }
-
-    // --- El resto de tus métodos (restarVida, mover, etc.) no necesitan cambios
-    // ---
-    public void restarVida() {
-        this.vidas--;
-    }
-
     private void moverPacMan() {
         if (pacman.puedeMoverseAhora()) {
             Point pos = pacman.getPosicion();
@@ -222,6 +110,10 @@ public class GameController {
         }
     }
 
+    /**
+     * Orquesta el movimiento de todos los fantasmas, incluyendo su IA y la
+     * resolución de colisiones entre ellos.
+     */
     private void moverFantasmas() {
         for (Fantasma fantasma : fantasmas) {
             fantasma.actualizarEstado();
@@ -251,6 +143,87 @@ public class GameController {
         }
     }
 
+    /**
+     * Aplica la lógica del túnel para que un personaje aparezca en el lado opuesto
+     * del mapa.
+     * 
+     * @param personaje El personaje (Pac-Man o Fantasma) al que aplicar el efecto.
+     */
+    private void aplicarEfectoTunel(Personaje personaje) {
+        int paso = 32;
+        int columnas = laberinto.getColumnas();
+        int maxX = (columnas - 1) * paso;
+        Point pos = personaje.getPosicion();
+        if (pos.x < 0)
+            personaje.setPosicion(new Point(maxX, pos.y));
+        else if (pos.x > maxX)
+            personaje.setPosicion(new Point(0, pos.y));
+    }
+
+    // ================================================================================
+    // SECCIÓN: LÓGICA DE INTERACCIONES Y REGLAS
+    // ================================================================================
+
+    /**
+     * Verifica todas las posibles interacciones (comer puntos, frutas, power-ups,
+     * colisiones).
+     * Si detecta una muerte, notifica al GameManager.
+     * 
+     * @return true si Pac-Man murió durante la interacción, false en caso
+     *         contrario.
+     */
+    private boolean procesarInteracciones() {
+        // Colisión con fantasmas
+        for (Fantasma fantasma : fantasmas) {
+            if (pacman.getPosicion().equals(fantasma.getPosicion())) {
+                if (pacmanInvencible) {
+                    fantasma.reiniciar();
+                    puntuacion += 200;
+                    soundManager.reproducirEfecto("pacman_comiendoFantasma.wav");
+                } else if (fantasma.getEstado() == EstadoFantasma.NORMAL) {
+                    gameManager.notificarMuerteDePacman();
+                    return true;
+                }
+            }
+        }
+        // Comer puntos
+        puntos.removeIf(p -> {
+            if (pacman.getPosicion().equals(p.getPosicion())) {
+                puntuacion += 10;
+                puntosComidosEnNivel++;
+                soundManager.reproducirComer();
+                return true;
+            }
+            return false;
+        });
+        // Comer Power-Ups
+        powerUps.removeIf(p -> {
+            if (pacman.getPosicion().equals(p.getPosicion())) {
+                puntuacion += 50;
+                puntosComidosEnNivel++;
+                activarEfecto(p.getTipo(), p.getDuracion());
+                return true;
+            }
+            return false;
+        });
+        // Comer Frutas
+        frutas.removeIf(fruta -> {
+            if (pacman.getPosicion().equals(fruta.getPosicion())) {
+                puntuacion += 100;
+                soundManager.reproducirComer();
+                return true;
+            }
+            return false;
+        });
+        return false;
+    }
+
+    /**
+     * Activa el efecto de un Power-Up, como la invencibilidad.
+     * 
+     * @param tipo     El tipo de efecto a activar.
+     * @param duracion La duración del efecto en milisegundos.
+     */
     private void activarEfecto(TipoPowerUp tipo, int duracion) {
         pacmanInvencible = true;
         for (Fantasma fantasma : fantasmas) {
@@ -263,34 +236,153 @@ public class GameController {
         }.start();
     }
 
-    private void reiniciarJuegoDesdeInterfaz() {
-        puntuacion = 0;
-        vidas = 3;
-        nivelActual = 1;
-        if (cicloIATimer != null)
-            cicloIATimer.stop();
-        gameManager.mostrarMenu();
+    // ================================================================================
+    // SECCIÓN: GESTIÓN DE LA LÓGICA DE LA FRUTA
+    // ================================================================================
+
+    /**
+     * Comprueba si se cumplen las condiciones para que aparezca una fruta en el
+     * nivel.
+     */
+    private void verificarAparicionFruta() {
+        if (posicionAparicionFruta == null)
+            return;
+        if (!haAparecidoPrimeraFruta && puntosComidosEnNivel >= 70) {
+            haAparecidoPrimeraFruta = true;
+            spawnFruta();
+        }
+        if (!haAparecidoSegundaFruta && puntosComidosEnNivel >= 170) {
+            haAparecidoSegundaFruta = true;
+            spawnFruta();
+        }
     }
 
+    /**
+     * Crea una instancia de Fruta, la añade al juego y programa su desaparición.
+     */
+    private void spawnFruta() {
+        Image imagenFruta = Nivel.cargarImagen("cherry.png");
+        Fruta nuevaFruta = new Fruta(posicionAparicionFruta, imagenFruta, 100, 9000);
+        frutas.add(nuevaFruta);
+        Timer temporizadorFruta = new Timer(9000, e -> frutas.remove(nuevaFruta));
+        temporizadorFruta.setRepeats(false);
+        temporizadorFruta.start();
+    }
+
+    /**
+     * Resetea por completo el estado de la fruta. Se usa al pasar de nivel.
+     */
+    private void resetearEstadoFrutaCompleto() {
+        this.puntosComidosEnNivel = 0;
+        this.haAparecidoPrimeraFruta = false;
+        this.haAparecidoSegundaFruta = false;
+        frutas.clear();
+    }
+
+    // ================================================================================
+    // SECCIÓN: GESTIÓN DEL CICLO DE VIDA DE LA PARTIDA
+    // ================================================================================
+
+    /**
+     * Prepara el juego para una nueva partida, cargando el primer nivel.
+     * 
+     * @return El GamePanel listo para ser mostrado en la ventana.
+     */
     public GamePanel prepararJuego() {
-        cargarNivelYPrepararPartida();
+        nivelActual = 1;
+        puntuacion = 0;
+        vidas = 3;
+
+        cargarLaberintoYElementos();
+        resetearEstadoFrutaCompleto();
+
         vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos, powerUps);
         vista.setGameManager(this.gameManager);
         vista.inicializarControles(pacman);
         vista.setReiniciarListener(this::reiniciarJuegoDesdeInterfaz);
+        iniciarCicloIAFantasmas();
         return vista;
     }
 
-    private void aplicarEfectoTunel(Personaje personaje) {
-        int paso = 32;
-        int columnas = laberinto.getColumnas();
-        int maxX = (columnas - 1) * paso;
-        Point pos = personaje.getPosicion();
-        if (pos.x < 0)
-            personaje.setPosicion(new Point(maxX, pos.y));
-        else if (pos.x > maxX)
-            personaje.setPosicion(new Point(0, pos.y));
+    /**
+     * Carga todos los elementos del nivel actual desde los archivos.
+     */
+    private void cargarLaberintoYElementos() {
+        NivelInfo nivelInfo = Nivel.cargarNivel(nivelActual, categoria);
+        if (nivelInfo == null)
+            return;
+        this.laberinto = nivelInfo.getLaberinto();
+        this.pacman = nivelInfo.getPacman();
+        this.fantasmas = nivelInfo.getFantasmas();
+        this.frutas = nivelInfo.getFrutas();
+        this.puntos = nivelInfo.getPuntos();
+        this.powerUps = nivelInfo.getPowerUps();
+        this.posicionAparicionFruta = nivelInfo.getPosicionFruta();
+        if (pacman != null)
+            pacman.setDireccion(Direccion.NINGUNA);
     }
+
+    /**
+     * Reinicia las posiciones de los personajes después de perder una vida.
+     * Este es un "reinicio duro": recarga los personajes para garantizar un estado
+     * limpio.
+     */
+    public void reiniciarPosiciones() {
+        int puntosGuardados = this.puntosComidosEnNivel;
+        boolean fruta1Aparecida = this.haAparecidoPrimeraFruta;
+        boolean fruta2Aparecida = this.haAparecidoSegundaFruta;
+
+        // Recargamos el nivel para obtener instancias 100% limpias de los personajes.
+        cargarLaberintoYElementos();
+
+        // Restauramos el estado de la fruta para que el progreso no se pierda al morir.
+        this.puntosComidosEnNivel = puntosGuardados;
+        this.haAparecidoPrimeraFruta = fruta1Aparecida;
+        this.haAparecidoSegundaFruta = fruta2Aparecida;
+        frutas.clear();
+
+        // Actualizamos la vista con los NUEVOS objetos.
+        vista.setPacMan(pacman);
+        vista.setFantasmas(fantasmas);
+        vista.setFrutas(frutas);
+        vista.setPuntos(puntos);
+        vista.setPowerUps(powerUps);
+        vista.setLaberinto(laberinto);
+
+        // ¡LA CLAVE! Volvemos a conectar el teclado al NUEVO Pac-Man.
+        vista.inicializarControles(pacman);
+
+        iniciarCicloIAFantasmas();
+    }
+
+    /**
+     * Carga los elementos del siguiente nivel.
+     */
+    private void pasarDeNivel() {
+        nivelActual++;
+        cargarLaberintoYElementos();
+        resetearEstadoFrutaCompleto();
+
+        vista.setPacMan(pacman);
+        vista.setFantasmas(fantasmas);
+        vista.setFrutas(frutas);
+        vista.setPuntos(puntos);
+        vista.setPowerUps(powerUps);
+        vista.setLaberinto(laberinto);
+        vista.inicializarControles(pacman);
+        iniciarCicloIAFantasmas();
+    }
+
+    /**
+     * Reinicia la partida completa para volver al menú.
+     */
+    private void reiniciarJuegoDesdeInterfaz() {
+        gameManager.mostrarMenu();
+    }
+
+    // ================================================================================
+    // SECCIÓN: GESTIÓN DE LA IA
+    // ================================================================================
 
     private void iniciarCicloIAFantasmas() {
         indiceCicloIA = 0;
@@ -313,6 +405,14 @@ public class GameController {
         modoActualIA = (modoActualIA == ModoGlobalIA.PERSEGUIR) ? ModoGlobalIA.DISPERSAR : ModoGlobalIA.PERSEGUIR;
         cicloIATimer.setInitialDelay(duracionesCiclo[indiceCicloIA]);
         cicloIATimer.restart();
+    }
+
+    // ================================================================================
+    // SECCIÓN: GETTERS Y SETTERS (PÚBLICOS)
+    // ================================================================================
+
+    public void restarVida() {
+        this.vidas--;
     }
 
     public int getPuntuacion() {
