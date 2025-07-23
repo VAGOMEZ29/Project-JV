@@ -3,7 +3,6 @@ package controlador;
 import modelo.CategoriaJuego;
 import vista.GamePanel;
 import vista.MenuPrincipal;
-import vista.PausePanel;
 
 import javax.swing.*;
 import java.awt.Color;
@@ -14,7 +13,6 @@ public class GameManager {
     private GamePanel gamePanel;
     private MenuPrincipal menuPrincipal;
     private GameController gameController;
-    private PausePanel pausePanel;
     private final SoundManager soundManager = new SoundManager();
     private Timer gameLoop;
     private GameState gameState;
@@ -67,12 +65,8 @@ public class GameManager {
 
     public void iniciarJuego() {
         setEstado(GameState.JUGANDO);
-        gameController = new GameController(this);
         gamePanel = gameController.prepararJuego();
-        pausePanel = new PausePanel(this, gameController);
-        pausePanel.setVisible(false);
-
-        crearVentanaDeJuegoConCapas();
+        crearVentanaConPanel(gamePanel);
 
         if (gameLoop != null)
             gameLoop.stop();
@@ -83,71 +77,33 @@ public class GameManager {
                 gameController.actualizarJuego();
                 gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas(),
                         gameController.getCategoria());
-                if (gameController.isGameWon())
+
+                if (gameController.isGameWon()) {
                     gestionarVictoria();
-                else if (gameController.isGameOver())
+                } else if (gameController.isGameOver()) {
                     gestionarDerrota();
+                }
             }
             gamePanel.repaint();
         });
         gameLoop.start();
     }
 
-    /**
-     * Alterna el estado del juego entre JUGANDO y PAUSA.
-     * Ahora también controla la visibilidad del panel de pausa y gestiona el foco
-     * del teclado.
-     */
-    public void togglePause() {
-        if (gameState == GameState.JUGANDO) {
-            setEstado(GameState.PAUSA);
-            pausePanel.setVisible(true);
-        } else if (gameState == GameState.PAUSA) {
-            setEstado(GameState.JUGANDO);
-            pausePanel.setVisible(false);
-
-            // ¡LA LÍNEA QUE LO ARREGLA TODO!
-            // Forzamos al GamePanel a recuperar el foco para que pueda escuchar el teclado
-            // de nuevo.
-            gamePanel.requestFocusInWindow();
-        }
-    }
-
-    private void crearVentanaDeJuegoConCapas() {
-        if (ventana != null)
-            ventana.dispose();
-        ventana = new JFrame("GhostDash");
-        ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        ventana.setResizable(false);
-
-        JLayeredPane layeredPane = new JLayeredPane();
-        layeredPane.setPreferredSize(gamePanel.getPreferredSize());
-
-        gamePanel.setBounds(0, 0, gamePanel.getPreferredSize().width, gamePanel.getPreferredSize().height);
-        layeredPane.add(gamePanel, JLayeredPane.DEFAULT_LAYER);
-
-        pausePanel.setBounds(0, 0, gamePanel.getPreferredSize().width, gamePanel.getPreferredSize().height);
-        layeredPane.add(pausePanel, JLayeredPane.PALETTE_LAYER);
-
-        ventana.add(layeredPane);
-        ventana.pack();
-        ventana.setLocationRelativeTo(null);
-        ventana.setVisible(true);
-        gamePanel.requestFocusInWindow();
-    }
-
     public void notificarMuerteDePacman() {
         if (procesandoMuerte)
             return;
+
         this.procesandoMuerte = true;
         gameLoop.stop();
         soundManager.reproducirEfecto("pacman_muerto.wav");
         gameController.restarVida();
-        if (!gameController.isGameOver()) {
+
+        if (gameController.isGameOver()) {
+            // Si es game over, el bucle principal lo detectará.
+            gameLoop.start();
+        } else {
             setEstado(GameState.VIDA_PERDIDA);
             gestionarPausaYReinicio();
-        } else {
-            gameLoop.start();
         }
     }
 
@@ -182,6 +138,13 @@ public class GameManager {
             gamePanel.mostrarPantallaFinal("Game Over", Color.RED);
         }
         gamePanel.mostrarBotonReiniciar();
+    }
+
+    public void togglePause() {
+        if (gameState == GameState.JUGANDO)
+            setEstado(GameState.PAUSA);
+        else if (gameState == GameState.PAUSA)
+            setEstado(GameState.JUGANDO);
     }
 
     public void setEstado(GameState estado) {
