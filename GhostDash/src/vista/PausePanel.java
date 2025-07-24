@@ -29,7 +29,7 @@ public class PausePanel extends JPanel {
         menuContainer.add(createTitle());
         menuContainer.add(Box.createVerticalStrut(30));
         
-        menuContainer.add(createButton("Reanudar", e -> gameManager.togglePause()));
+        menuContainer.add(createButton("Reanudar Juego", e -> gameManager.togglePause()));
         menuContainer.add(Box.createVerticalStrut(15));
         
         menuContainer.add(createButton("Reiniciar Nivel", e -> {
