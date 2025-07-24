@@ -1,16 +1,26 @@
 package vista;
 
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 public class GameFrame extends JFrame {
-
     public GameFrame() {
-        this.setTitle("Pac-Man Mejorado");
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setResizable(false);
-        this.setSize(800, 600); // Un tamaño por defecto para que sea visible
-        this.setLocationRelativeTo(null); // Centra la ventana
-        this.setVisible(true);
+        configureWindow();
     }
-    // No main method here.
+
+    private void configureWindow() {
+        setTitle("GhostDash veaguirreg-aeraso"); // Nombre consistente con el proyecto
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setResizable(false);
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+    }
+
+    public void showPanel(JPanel panel) {
+        getContentPane().removeAll();
+        add(panel);
+        revalidate();
+        repaint();
+        setVisible(true);
+    }
 }
