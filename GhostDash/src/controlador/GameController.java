@@ -245,15 +245,44 @@ public class GameController {
      * @param duracion La duración del efecto en milisegundos.
      */
     private void activarEfecto(TipoPowerUp tipo, int duracion) {
-        pacmanInvencible = true;
-        for (Fantasma fantasma : fantasmas) {
-            fantasma.activarHuida(duracion);
+        switch (tipo) {
+            case INVENCIBILIDAD:
+                pacmanInvencible = true;
+                for (Fantasma fantasma : fantasmas) {
+                    fantasma.activarHuida(duracion);
+                }
+                new Timer(duracion, e -> pacmanInvencible = false) {{
+                    setRepeats(false);
+                }}.start();
+                break;
+
+            case VELOCIDAD:
+                pacman.setVelocidad(pacman.getVelocidad() * 1.5);
+                new Timer(duracion, e -> pacman.setVelocidad(pacman.getVelocidad() / 1.5)) {{
+                    setRepeats(false);
+                }}.start();
+                break;
+
+            case CONGELAR_ENEMIGOS:
+                for (Fantasma fantasma : fantasmas) {
+                    fantasma.setCongelado(true);
+                }
+                new Timer(duracion, e -> {
+                    for (Fantasma fantasma : fantasmas) {
+                        fantasma.setCongelado(false);
+                    }
+                }) {{
+                    setRepeats(false);
+                }}.start();
+                break;
+
+            case DOBLE_PUNTOS:
+                // podrías usar una variable `doblePuntos = true;` que modificas en procesarInteracciones()
+                activarDoblePuntos(duracion);
+                break;
         }
-        new Timer(duracion, e -> pacmanInvencible = false) {
-            {
-                setRepeats(false);
-            }
-        }.start();
+
+        soundManager.reproducirEfecto("pacman_powerUp.wav");
     }
 
     // ================================================================================

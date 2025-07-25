@@ -74,6 +74,12 @@ public class Nivel {
 
                         case 'f' -> powerUps.add(
                                 new PowerUp(posicion, cargarImagen("powerFood.png"), TipoPowerUp.INVENCIBILIDAD, 5000));
+                        case 'v' -> powerUps.add(
+                                new PowerUp(posicion, cargarImagen("velocidadPower.png"), TipoPowerUp.VELOCIDAD, 5000));
+                        case 'd' -> powerUps.add(
+                                new PowerUp(posicion, cargarImagen("powerFood2.png"), TipoPowerUp.DOBLE_PUNTOS, 5000));
+                        case 'c' -> powerUps.add(
+                                new PowerUp(posicion, cargarImagen("congelarPower.png"), TipoPowerUp.CONGELAR_ENEMIGOS, 5000));
                         case 'F' -> posicionAparicionFruta = posicion;
                         case '.', 'O' -> puntos.add(new Punto(posicion, 10));
                     }

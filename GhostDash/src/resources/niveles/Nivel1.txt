@@ -1,11 +1,11 @@
 XXXXXXXXXXXXXXXXXXX
 Xf.......X.......fX  
 X.XX.XXX.X.XXX.XX.X
-X.................X
+X.......d.........X
 X.XX.X.XXXXX.X.XX.X
 X....X...f...X....X  
 XXXXFXXXX.X.XXXXXXX
-OOOO.X.......X.OOOOO
+OOOO.X..v....X.OOOOO
 XXXX.X.XXrXX.X.XXXX
 O.F....bp.o.......O
 XXXX.X.XXXXX.X.XXXX
