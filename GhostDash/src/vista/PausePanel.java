@@ -2,6 +2,8 @@ package vista;
 
 import controlador.GameController;
 import controlador.GameManager;
+import modelo.GuardarPartida;
+import services.GuardarPartidaCSV;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -36,8 +38,15 @@ public class PausePanel extends JPanel {
             gameManager.togglePause();
             gameController.reiniciarNivel();
         }));
-        menuContainer.add(Box.createVerticalStrut(15));
+        menuContainer.add(createButton("Guardar Partida", e ->{
+            int vidas = gameController.getVidas();
+            int puntos = gameController.getPuntuacion();
+            int nivel = gameController.getNivel();
 
+            services.GuardarPartidaCSV.guardar(new modelo.GuardarPartida(nivel, puntos, vidas));
+            JOptionPane.showMessageDialog(null,"Partida guardada exitosamente.");
+        }));
+        menuContainer.add(Box.createVerticalStrut(15));
         menuContainer.add(createButton("Salir al Menú", e -> gameManager.mostrarMenu()));
 
         add(menuContainer);

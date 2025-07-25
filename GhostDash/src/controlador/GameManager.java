@@ -5,6 +5,7 @@ import vista.GamePanel;
 import vista.MenuPrincipal;
 import vista.PausePanel;
 
+
 import javax.swing.*;
 import java.awt.Color;
 
@@ -35,12 +36,12 @@ public class GameManager {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
                 String categoriaStr = menuPrincipal.getCategoriaSeleccionada();
                 gameController = new GameController(this);
-                
+
                 if (categoriaStr.equalsIgnoreCase("Mejorado")) {
                     gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
                 } else if (categoriaStr.equalsIgnoreCase("Multijugador")) {
                     gameController.setCategoria(CategoriaJuego.MULTIJUGADOR);
-                } else {
+                }else {
                     gameController.setCategoria(CategoriaJuego.CLASICO);
                 }
                 soundManager.detenerMusicaFondo();
@@ -62,6 +63,10 @@ public class GameManager {
             } else if (e.getSource() == menuPrincipal.getBtnSalir()) {
                 System.exit(0);
             }
+            else if (e.getSource() == menuPrincipal.getBtnCargarPartida()) {
+                    System.out.println("nada?");
+                    mostrarCargarPartida();
+            }
         });
         crearVentanaConPanel(menuPrincipal);
     }
@@ -72,6 +77,12 @@ public class GameManager {
         pausePanel = new PausePanel(this, gameController);
         pausePanel.setVisible(false);
 
+        gamePanel.actualizarHUD(
+            gameController.getPuntuacion(),
+            gameController.getVidas(),
+            gameController.getCategoria()
+        );
+        
         crearVentanaDeJuegoConCapas();
 
         if (gameLoop != null)
@@ -201,4 +212,14 @@ public class GameManager {
         ventana.setVisible(true);
         panel.requestFocusInWindow();
     }
+
+    public void setGameController(GameController gameController) {
+        this.gameController = gameController;
+    }
+
+    public void mostrarCargarPartida(){
+        JPanel cargarPartidaPanel = new vista.CargarPartidaPanel(this);
+        crearVentanaConPanel(cargarPartidaPanel);
+    }
+
 }

@@ -53,8 +53,10 @@ public class GameController {
     private final GameManager gameManager;
     private final SoundManager soundManager = new SoundManager();
 
-    //Variables para el doble Puntos
-    private boolean doblePuntosActivo= false;
+    // Variables para el doble Puntos
+    private boolean doblePuntosActivo = false;
+    private boolean esPartidaCargada = false;
+
     /**
      * Constructor de la clase.
      * 
@@ -207,7 +209,7 @@ public class GameController {
         }
         puntos.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += doblePuntosActivo ? 20:10;
+                puntuacion += doblePuntosActivo ? 20 : 10;
                 puntosComidosEnNivel++;
                 soundManager.reproducirComer();
                 return true;
@@ -247,30 +249,35 @@ public class GameController {
      * @param duracion La duración del efecto en milisegundos.
      */
     private void activarEfecto(TipoPowerUp tipo, int duracion) {
-        // Si el modo de juego es CLÁSICO, solo permitimos  INVENCIBILIDAD Y VELOCIDAD
+        // Si el modo de juego es CLÁSICO, solo permitimos INVENCIBILIDAD Y VELOCIDAD
         if (categoria == CategoriaJuego.CLASICO) {
-            if (tipo != TipoPowerUp.INVENCIBILIDAD && tipo != TipoPowerUp.VELOCIDAD) return;
-        } 
+            if (tipo != TipoPowerUp.INVENCIBILIDAD && tipo != TipoPowerUp.VELOCIDAD)
+                return;
+        }
         switch (tipo) {
             case INVENCIBILIDAD:
                 pacmanInvencible = true;
                 for (Fantasma fantasma : fantasmas) {
                     fantasma.activarHuida(duracion);
                 }
-                new Timer(duracion, e -> pacmanInvencible = false) {{
-                    setRepeats(false);
-                }}.start();
+                new Timer(duracion, e -> pacmanInvencible = false) {
+                    {
+                        setRepeats(false);
+                    }
+                }.start();
                 break;
 
             case VELOCIDAD:
                 pacman.setVelocidad(pacman.getVelocidad() * 1.5);
-                new Timer(duracion, e -> pacman.setVelocidad(pacman.getVelocidad() / 1.5)) {{
-                    setRepeats(false);
-                }}.start();
+                new Timer(duracion, e -> pacman.setVelocidad(pacman.getVelocidad() / 1.5)) {
+                    {
+                        setRepeats(false);
+                    }
+                }.start();
                 break;
 
             case CONGELAR_ENEMIGOS:
-                if(categoria == CategoriaJuego.CLASICO_MEJORADO){ 
+                if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
                     for (Fantasma fantasma : fantasmas) {
                         fantasma.setCongelado(true);
                     }
@@ -278,18 +285,22 @@ public class GameController {
                         for (Fantasma fantasma : fantasmas) {
                             fantasma.setCongelado(false);
                         }
-                    }) {{
-                        setRepeats(false);
-                    }}.start();
+                    }) {
+                        {
+                            setRepeats(false);
+                        }
+                    }.start();
                 }
-                    break;
+                break;
 
             case DOBLE_PUNTOS:
-                if(categoria==CategoriaJuego.CLASICO_MEJORADO){
+                if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
                     doblePuntosActivo = true;
-                    new Timer(duracion, e -> doblePuntosActivo = false) {{
-                        setRepeats(false);
-                    }}.start();
+                    new Timer(duracion, e -> doblePuntosActivo = false) {
+                        {
+                            setRepeats(false);
+                        }
+                    }.start();
                 }
                 break;
             default:
@@ -298,7 +309,6 @@ public class GameController {
 
         soundManager.reproducirEfecto("pacman_powerUp.wav");
     }
-
 
     // ================================================================================
     // SECCIÓN: GESTIÓN DE LA LÓGICA DE LA FRUTA
@@ -338,11 +348,12 @@ public class GameController {
     // ================================================================================
 
     public GamePanel prepararJuego() {
-        System.out.println("Categoria actual" + categoria); //debug
-        nivelActual = 1;
-        puntuacion = 0;
-        vidas = 3;
-
+        System.out.println("Categoria actual" + categoria); // debug
+        if (!esPartidaCargada) {
+            nivelActual = 1;
+            puntuacion = 0;
+            vidas = 3;
+        }
         cargarLaberintoYElementos();
         resetearEstadoFrutaCompleto();
 
@@ -491,6 +502,10 @@ public class GameController {
         return vidas <= 0;
     }
 
+    public int getNivel() {
+        return nivelActual;
+    }
+
     public boolean isGameWon() {
         return (puntos.isEmpty() && powerUps.isEmpty() && nivelActual >= 3);
     }
@@ -501,5 +516,17 @@ public class GameController {
 
     public void setCategoria(CategoriaJuego categoria) {
         this.categoria = categoria;
-    } 
+    }
+
+    public void setPuntuacion(int puntuacion) {
+        this.puntuacion = puntuacion;
+    }
+
+    public void setEsPartidaCargada(boolean cargada) {
+        this.esPartidaCargada = cargada;
+    }
+
+    public void setVidas(int vidas) {
+        this.vidas = vidas;
+    }
 }

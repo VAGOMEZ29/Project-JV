@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 
 public class MenuPrincipal extends JPanel {
-    private JButton btnJugar, btnInstrucciones, btnSalir;
+    private JButton btnJugar, btnInstrucciones, btnSalir, btnCargarPartida;
     private JComboBox<String> comboCategorias;
 
     public MenuPrincipal(ActionListener manejador) {
@@ -93,6 +93,10 @@ public class MenuPrincipal extends JPanel {
         centerPanel.add(btnInstrucciones);
         centerPanel.add(Box.createVerticalStrut(20));
 
+        btnCargarPartida = createHoverButton("CARGAR PARTIDA", new Color(144, 238, 144), manejador);
+        centerPanel.add(btnCargarPartida);
+        centerPanel.add(Box.createVerticalStrut(20));
+
         btnSalir = createHoverButton("SALIR", new Color(255, 100, 100), manejador);
         centerPanel.add(btnSalir);
 
@@ -146,6 +150,10 @@ public class MenuPrincipal extends JPanel {
 
     public JButton getBtnInstrucciones() {
         return btnInstrucciones;
+    }
+
+    public JButton getBtnCargarPartida() {
+        return btnCargarPartida;
     }
 
     public JButton getBtnSalir() {
