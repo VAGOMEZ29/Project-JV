@@ -25,6 +25,10 @@ public class GameManager {
         mostrarMenu();
     }
 
+    public SoundManager getSoundManager() {
+        return soundManager;
+    }
+
     public void mostrarMenu() {
         setEstado(GameState.MENU_PRINCIPAL);
         if (gameLoop != null)
@@ -34,8 +38,9 @@ public class GameManager {
         menuPrincipal = new MenuPrincipal(e -> {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
                 String categoriaStr = menuPrincipal.getCategoriaSeleccionada();
+                // Se crea un nuevo GameController para cada partida, asegurando un estado
+                // limpio.
                 gameController = new GameController(this);
-                
                 if (categoriaStr.equalsIgnoreCase("Mejorado")) {
                     gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
                 } else if (categoriaStr.equalsIgnoreCase("Multijugador")) {
@@ -67,6 +72,10 @@ public class GameManager {
     }
 
     public void iniciarJuego() {
+        // ¡LA LÍNEA QUE LO ARREGLA TODO!
+        // Reseteamos el bloqueo de muerte al inicio de CADA partida.
+        this.procesandoMuerte = false;
+
         setEstado(GameState.JUGANDO);
         gamePanel = gameController.prepararJuego();
         pausePanel = new PausePanel(this, gameController);
@@ -83,21 +92,20 @@ public class GameManager {
                 gameController.actualizarJuego();
                 gamePanel.actualizarHUD(gameController.getPuntuacion(), gameController.getVidas(),
                         gameController.getCategoria());
-                if (gameController.isGameWon())
+
+                // Las condiciones de victoria/derrota se comprueban después de notificar la
+                // muerte.
+                if (gameController.isGameWon()) {
                     gestionarVictoria();
-                else if (gameController.isGameOver())
+                } else if (gameController.isGameOver()) {
                     gestionarDerrota();
+                }
             }
             gamePanel.repaint();
         });
         gameLoop.start();
     }
 
-    /**
-     * Alterna el estado del juego entre JUGANDO y PAUSA.
-     * Ahora también controla la visibilidad del panel de pausa y gestiona el foco
-     * del teclado.
-     */
     public void togglePause() {
         if (gameState == GameState.JUGANDO) {
             setEstado(GameState.PAUSA);
@@ -105,9 +113,6 @@ public class GameManager {
         } else if (gameState == GameState.PAUSA) {
             setEstado(GameState.JUGANDO);
             pausePanel.setVisible(false);
-
-            // Forzamos al GamePanel a recuperar el foco para que pueda escuchar el teclado
-            // de nuevo.
             gamePanel.requestFocusInWindow();
         }
     }
@@ -118,16 +123,12 @@ public class GameManager {
         ventana = new JFrame("GhostDash");
         ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         ventana.setResizable(false);
-
         JLayeredPane layeredPane = new JLayeredPane();
         layeredPane.setPreferredSize(gamePanel.getPreferredSize());
-
         gamePanel.setBounds(0, 0, gamePanel.getPreferredSize().width, gamePanel.getPreferredSize().height);
         layeredPane.add(gamePanel, JLayeredPane.DEFAULT_LAYER);
-
         pausePanel.setBounds(0, 0, gamePanel.getPreferredSize().width, gamePanel.getPreferredSize().height);
         layeredPane.add(pausePanel, JLayeredPane.PALETTE_LAYER);
-
         ventana.add(layeredPane);
         ventana.pack();
         ventana.setLocationRelativeTo(null);
@@ -138,14 +139,20 @@ public class GameManager {
     public void notificarMuerteDePacman() {
         if (procesandoMuerte)
             return;
+
         this.procesandoMuerte = true;
         gameLoop.stop();
         soundManager.reproducirEfecto("pacman_muerto.wav");
         gameController.restarVida();
+
+        // Ahora, la comprobación de Game Over se hace en el bucle principal.
+        // Si no es game over, simplemente iniciamos la pausa.
         if (!gameController.isGameOver()) {
             setEstado(GameState.VIDA_PERDIDA);
             gestionarPausaYReinicio();
         } else {
+            // Si es game over, reanudamos el bucle brevemente para que
+            // la lógica en iniciarJuego() lo detecte y muestre la pantalla final.
             gameLoop.start();
         }
     }
@@ -154,7 +161,7 @@ public class GameManager {
         Timer pausaTimer = new Timer(2000, e -> {
             gameController.reiniciarPosiciones();
             setEstado(GameState.JUGANDO);
-            this.procesandoMuerte = false;
+            this.procesandoMuerte = false; // Se desbloquea aquí
             gameLoop.start();
         });
         pausaTimer.setRepeats(false);

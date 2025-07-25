@@ -35,6 +35,7 @@ public class GameController {
     private int nivelActual = 1;
     private CategoriaJuego categoria = CategoriaJuego.CLASICO;
     private boolean pacmanInvencible = false;
+    private boolean doblePuntosActivo = false;
 
     // --- Lógica de la Fruta ---
     private Point posicionAparicionFruta;
@@ -42,7 +43,7 @@ public class GameController {
     private boolean haAparecidoPrimeraFruta;
     private boolean haAparecidoSegundaFruta;
 
-    // --- Lógica de la IA ---
+    // --- Lógica de la IA y Multijugador ---
     private ModoGlobalIA modoActualIA;
     private Timer cicloIATimer;
     private final int[] duracionesCiclo = { 7000, 20000, 7000, 20000, 5000, 20000, 5000 };
@@ -53,8 +54,6 @@ public class GameController {
     private final GameManager gameManager;
     private final SoundManager soundManager = new SoundManager();
 
-    //Variables para el doble Puntos
-    private boolean doblePuntosActivo= false;
     /**
      * Constructor de la clase.
      * 
@@ -76,17 +75,13 @@ public class GameController {
     public void actualizarJuego() {
         if (isGameOver() || isGameWon())
             return;
-
         moverPacMan();
         if (procesarInteracciones())
-            return; // Si Pac-Man muere, detenemos el fotograma.
-
+            return;
         moverFantasmas();
         if (procesarInteracciones())
-            return; // Verificamos de nuevo por si un fantasma se movió sobre Pac-Man.
-
+            return;
         verificarAparicionFruta();
-
         if (puntos.isEmpty() && powerUps.isEmpty() && nivelActual < 3) {
             pasarDeNivel();
         }
@@ -96,10 +91,6 @@ public class GameController {
     // SECCIÓN: LÓGICA DE MOVIMIENTO DE PERSONAJES
     // ================================================================================
 
-    /**
-     * Gestiona el movimiento de Pac-Man basándose en la entrada del usuario y las
-     * reglas del laberinto.
-     */
     private void moverPacMan() {
         if (pacman.puedeMoverseAhora()) {
             Point pos = pacman.getPosicion();
@@ -114,61 +105,49 @@ public class GameController {
         }
     }
 
-    /**
-     * Orquesta el movimiento de todos los fantasmas, tanto los controlados por IA
-     * como por el jugador.
-     */
     private void moverFantasmas() {
-        // Movimiento del Fantasma Jugador (si existe)
-        if (fantasmaJugador != null && fantasmaJugador.puedeMoverseAhora()) {
-            Point pos = fantasmaJugador.getPosicion();
-            Direccion dirDeseada = fantasmaJugador.getDireccionDeseada();
-            if (dirDeseada != Direccion.NINGUNA && laberinto.puedeMover(pos, dirDeseada)) {
-                fantasmaJugador.setDireccion(dirDeseada);
-            }
-            if (laberinto.puedeMover(pos, fantasmaJugador.getDireccion())) {
-                fantasmaJugador.mover(fantasmaJugador.getDireccion());
-                aplicarEfectoTunel(fantasmaJugador);
-            }
-        }
-
-        // Movimiento de los Fantasmas IA
         for (Fantasma fantasma : fantasmas) {
-            if (fantasma instanceof FantasmaJugador)
-                continue; // Saltamos al fantasma del jugador
-
-            fantasma.actualizarEstado();
-            fantasma.decidirSiguienteDireccion(pacman, fantasmas, laberinto, modoActualIA);
-
-            if (fantasma.puedeMoverseAhora()) {
-                boolean cederElPaso = false;
-                Point proximaPos = fantasma.getProximaPosicion();
-                for (Fantasma otroFantasma : fantasmas) {
-                    if (fantasma == otroFantasma)
-                        continue;
-                    if (proximaPos.equals(otroFantasma.getPosicion())
-                            && otroFantasma.getProximaPosicion().equals(fantasma.getPosicion())) {
-                        if (fantasma.getPrioridad() > otroFantasma.getPrioridad())
-                            cederElPaso = true;
-                    } else if (proximaPos.equals(otroFantasma.getProximaPosicion())) {
-                        if (fantasma.getPrioridad() > otroFantasma.getPrioridad())
-                            cederElPaso = true;
+            if (fantasma.estaCongelado())
+                continue;
+            if (fantasma instanceof FantasmaJugador) {
+                if (fantasma.puedeMoverseAhora()) {
+                    Point pos = fantasma.getPosicion();
+                    Direccion dirDeseada = ((FantasmaJugador) fantasma).getDireccionDeseada();
+                    if (dirDeseada != Direccion.NINGUNA && laberinto.puedeMover(pos, dirDeseada)) {
+                        fantasma.setDireccion(dirDeseada);
+                    }
+                    if (laberinto.puedeMover(pos, fantasma.getDireccion())) {
+                        fantasma.mover(fantasma.getDireccion());
+                        aplicarEfectoTunel(fantasma);
                     }
                 }
-                if (!cederElPaso && laberinto.puedeMover(fantasma.getPosicion(), fantasma.getDireccion())) {
-                    fantasma.mover(fantasma.getDireccion());
-                    aplicarEfectoTunel(fantasma);
+            } else {
+                fantasma.actualizarEstado();
+                fantasma.decidirSiguienteDireccion(pacman, fantasmas, laberinto, modoActualIA);
+                if (fantasma.puedeMoverseAhora()) {
+                    boolean cederElPaso = false;
+                    Point proximaPos = fantasma.getProximaPosicion();
+                    for (Fantasma otroFantasma : fantasmas) {
+                        if (fantasma == otroFantasma)
+                            continue;
+                        if (proximaPos.equals(otroFantasma.getPosicion())
+                                && otroFantasma.getProximaPosicion().equals(fantasma.getPosicion())) {
+                            if (fantasma.getPrioridad() > otroFantasma.getPrioridad())
+                                cederElPaso = true;
+                        } else if (proximaPos.equals(otroFantasma.getProximaPosicion())) {
+                            if (fantasma.getPrioridad() > otroFantasma.getPrioridad())
+                                cederElPaso = true;
+                        }
+                    }
+                    if (!cederElPaso && laberinto.puedeMover(fantasma.getPosicion(), fantasma.getDireccion())) {
+                        fantasma.mover(fantasma.getDireccion());
+                        aplicarEfectoTunel(fantasma);
+                    }
                 }
             }
         }
     }
 
-    /**
-     * Aplica la lógica del túnel para que un personaje aparezca en el lado opuesto
-     * del mapa.
-     * 
-     * @param personaje El personaje (Pac-Man o Fantasma) al que aplicar el efecto.
-     */
     private void aplicarEfectoTunel(Personaje personaje) {
         int paso = 32;
         int columnas = laberinto.getColumnas();
@@ -181,23 +160,15 @@ public class GameController {
     }
 
     // ================================================================================
-    // SECCIÓN: LÓGICA DE INTERACCIONES Y REGLAS
+    // SECCIÓN: LÓGICA DE INTERACCIONES Y POWER-UPS
     // ================================================================================
 
-    /**
-     * Verifica todas las posibles interacciones (comer puntos, frutas, power-ups,
-     * colisiones).
-     * Si detecta una muerte, notifica al GameManager.
-     * 
-     * @return true si Pac-Man murió durante la interacción, false en caso
-     *         contrario.
-     */
     private boolean procesarInteracciones() {
         for (Fantasma fantasma : fantasmas) {
-            if (pacman.getPosicion().equals(fantasma.getPosicion())) {
+            if (pacman.getPosicion().equals(fantasma.getPosicion()) && !fantasma.estaCongelado()) {
                 if (pacmanInvencible) {
                     fantasma.reiniciar();
-                    puntuacion += 200;
+                    puntuacion += doblePuntosActivo ? 400 : 200;
                     soundManager.reproducirEfecto("pacman_comiendoFantasma.wav");
                 } else if (fantasma.getEstado() == EstadoFantasma.NORMAL) {
                     gameManager.notificarMuerteDePacman();
@@ -207,7 +178,7 @@ public class GameController {
         }
         puntos.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += doblePuntosActivo ? 20:10;
+                puntuacion += doblePuntosActivo ? 20 : 10;
                 puntosComidosEnNivel++;
                 soundManager.reproducirComer();
                 return true;
@@ -216,7 +187,7 @@ public class GameController {
         });
         powerUps.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += 50;
+                puntuacion += doblePuntosActivo ? 100 : 50;
                 puntosComidosEnNivel++;
                 activarEfecto(p.getTipo(), p.getDuracion());
                 return true;
@@ -226,7 +197,7 @@ public class GameController {
         frutas.removeIf(fruta -> {
             boolean comida = false;
             if (pacman.getPosicion().equals(fruta.getPosicion())) {
-                puntuacion += 100;
+                puntuacion += doblePuntosActivo ? 200 : 100;
                 soundManager.reproducirComer();
                 comida = true;
             } else if (categoria == CategoriaJuego.MULTIJUGADOR && fantasmaJugador != null
@@ -240,69 +211,50 @@ public class GameController {
         return false;
     }
 
-    /**
-     * Activa el efecto de un Power-Up según el tipo y el modo de juego actual
-     * 
-     * @param tipo     El tipo de efecto a activar.
-     * @param duracion La duración del efecto en milisegundos.
-     */
     private void activarEfecto(TipoPowerUp tipo, int duracion) {
-        // Si el modo de juego es CLÁSICO, solo permitimos  INVENCIBILIDAD Y VELOCIDAD
-        if (categoria == CategoriaJuego.CLASICO) {
-            if (tipo != TipoPowerUp.INVENCIBILIDAD && tipo != TipoPowerUp.VELOCIDAD) return;
-        } 
+        soundManager.reproducirEfecto("pacman_powerUp.wav");
         switch (tipo) {
             case INVENCIBILIDAD:
                 pacmanInvencible = true;
-                for (Fantasma fantasma : fantasmas) {
+                for (Fantasma fantasma : fantasmas)
                     fantasma.activarHuida(duracion);
-                }
-                new Timer(duracion, e -> pacmanInvencible = false) {{
-                    setRepeats(false);
-                }}.start();
-                break;
-
-            case VELOCIDAD:
-                pacman.setVelocidad(pacman.getVelocidad() * 1.5);
-                new Timer(duracion, e -> pacman.setVelocidad(pacman.getVelocidad() / 1.5)) {{
-                    setRepeats(false);
-                }}.start();
-                break;
-
-            case CONGELAR_ENEMIGOS:
-                if(categoria == CategoriaJuego.CLASICO_MEJORADO){ 
-                    for (Fantasma fantasma : fantasmas) {
-                        fantasma.setCongelado(true);
+                new Timer(duracion, e -> pacmanInvencible = false) {
+                    {
+                        setRepeats(false);
                     }
-                    new Timer(duracion, e -> {
-                        for (Fantasma fantasma : fantasmas) {
-                            fantasma.setCongelado(false);
-                        }
-                    }) {{
-                        setRepeats(false);
-                    }}.start();
-                }
-                    break;
-
-            case DOBLE_PUNTOS:
-                if(categoria==CategoriaJuego.CLASICO_MEJORADO){
-                    doblePuntosActivo = true;
-                    new Timer(duracion, e -> doblePuntosActivo = false) {{
-                        setRepeats(false);
-                    }}.start();
-                }
+                }.start();
                 break;
-            default:
+            case VELOCIDAD:
+                double velocidadOriginal = pacman.getVelocidad();
+                pacman.setVelocidad(velocidadOriginal * 1.5);
+                new Timer(duracion, e -> pacman.setVelocidad(velocidadOriginal)) {
+                    {
+                        setRepeats(false);
+                    }
+                }.start();
+                break;
+            case CONGELAR_ENEMIGOS:
+                for (Fantasma fantasma : fantasmas)
+                    fantasma.setCongelado(true);
+                new Timer(duracion, e -> {
+                    for (Fantasma fantasma : fantasmas)
+                        fantasma.setCongelado(false);
+                }) {
+                    {
+                        setRepeats(false);
+                    }
+                }.start();
+                break;
+            case DOBLE_PUNTOS:
+                doblePuntosActivo = true;
+                new Timer(duracion, e -> doblePuntosActivo = false) {
+                    {
+                        setRepeats(false);
+                    }
+                }.start();
                 break;
         }
-
-        soundManager.reproducirEfecto("pacman_powerUp.wav");
     }
-
-
-    // ================================================================================
-    // SECCIÓN: GESTIÓN DE LA LÓGICA DE LA FRUTA
-    // ================================================================================
 
     private void verificarAparicionFruta() {
         if (posicionAparicionFruta == null)
@@ -326,26 +278,16 @@ public class GameController {
         temporizadorFruta.start();
     }
 
-    private void resetearEstadoFrutaCompleto() {
-        this.puntosComidosEnNivel = 0;
-        this.haAparecidoPrimeraFruta = false;
-        this.haAparecidoSegundaFruta = false;
-        frutas.clear();
-    }
-
     // ================================================================================
     // SECCIÓN: GESTIÓN DEL CICLO DE VIDA DE LA PARTIDA
     // ================================================================================
 
     public GamePanel prepararJuego() {
-        System.out.println("Categoria actual" + categoria); //debug
         nivelActual = 1;
         puntuacion = 0;
         vidas = 3;
-
         cargarLaberintoYElementos();
         resetearEstadoFrutaCompleto();
-
         vista = new GamePanel(laberinto, pacman, fantasmas, frutas, puntos, powerUps, this.categoria);
         vista.setGameManager(this.gameManager);
         vista.inicializarControles(pacman, this.fantasmaJugador);
@@ -365,7 +307,6 @@ public class GameController {
         this.puntos = nivelInfo.getPuntos();
         this.powerUps = nivelInfo.getPowerUps();
         this.posicionAparicionFruta = nivelInfo.getPosicionFruta();
-
         this.fantasmaJugador = null;
         if (categoria == CategoriaJuego.MULTIJUGADOR) {
             for (Fantasma f : fantasmas) {
@@ -375,7 +316,6 @@ public class GameController {
                 }
             }
         }
-
         if (pacman != null)
             pacman.setDireccion(Direccion.NINGUNA);
     }
@@ -404,7 +344,6 @@ public class GameController {
         vista.setLaberinto(laberinto);
 
         vista.inicializarControles(pacman, this.fantasmaJugador);
-
         iniciarCicloIAFantasmas();
     }
 
@@ -412,7 +351,6 @@ public class GameController {
         nivelActual++;
         cargarLaberintoYElementos();
         resetearEstadoFrutaCompleto();
-
         vista.setPacMan(pacman);
         vista.setFantasmas(fantasmas);
         vista.setFrutas(frutas);
@@ -420,7 +358,24 @@ public class GameController {
         vista.setPowerUps(powerUps);
         vista.setLaberinto(laberinto);
         vista.inicializarControles(pacman, this.fantasmaJugador);
+        iniciarCicloIAFantasmas();
+    }
 
+    public void reiniciarNivel() {
+        // Al reiniciar desde el menú de pausa, reseteamos todo como si fuera una
+        // partida nueva.
+        puntuacion = 0;
+        vidas = 3;
+        nivelActual = 1;
+        cargarLaberintoYElementos();
+        resetearEstadoFrutaCompleto();
+        vista.setPacMan(pacman);
+        vista.setFantasmas(fantasmas);
+        vista.setFrutas(frutas);
+        vista.setPuntos(puntos);
+        vista.setPowerUps(powerUps);
+        vista.setLaberinto(laberinto);
+        vista.inicializarControles(pacman, this.fantasmaJugador);
         iniciarCicloIAFantasmas();
     }
 
@@ -428,14 +383,11 @@ public class GameController {
         gameManager.mostrarMenu();
     }
 
-    /**
-     * Reinicia el nivel actual a su estado inicial.
-     * Mantiene las vidas y la puntuación, pero resetea las posiciones y la fruta.
-     */
-    public void reiniciarNivel() {
-        // La lógica de reiniciar posiciones ya hace un "reinicio duro" que es
-        // perfecto para reiniciar el nivel desde cero.
-        reiniciarPosiciones();
+    private void resetearEstadoFrutaCompleto() {
+        this.puntosComidosEnNivel = 0;
+        this.haAparecidoPrimeraFruta = false;
+        this.haAparecidoSegundaFruta = false;
+        frutas.clear();
     }
 
     // ================================================================================
@@ -472,7 +424,7 @@ public class GameController {
     }
 
     // ================================================================================
-    // SECCIÓN: GETTERS Y SETTERS (PÚBLICOS)
+    // SECCIÓN: GETTERS Y SETTERS PÚBLICOS
     // ================================================================================
 
     public void restarVida() {
@@ -492,7 +444,7 @@ public class GameController {
     }
 
     public boolean isGameWon() {
-        return (puntos.isEmpty() && powerUps.isEmpty() && nivelActual >= 3);
+        return (puntos.isEmpty() && powerUps.isEmpty());
     }
 
     public CategoriaJuego getCategoria() {
@@ -501,5 +453,5 @@ public class GameController {
 
     public void setCategoria(CategoriaJuego categoria) {
         this.categoria = categoria;
-    } 
+    }
 }

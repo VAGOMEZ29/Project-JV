@@ -1,6 +1,7 @@
 package modelo;
 
-import javax.swing.*;
+import javax.swing.ImageIcon;
+
 import java.awt.*;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Nivel {
+    // En la clase: Nivel.java
 
     public static NivelInfo cargarNivel(int numero, CategoriaJuego categoria) {
         List<Fantasma> fantasmas = new ArrayList<>();
@@ -26,15 +28,13 @@ public class Nivel {
                 BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
 
             if (is == null) {
-                System.err.println("❌ No se encontró el archivo del nivel: " + ruta);
                 return null;
             }
 
             List<char[]> filas = new ArrayList<>();
             String linea;
-            while ((linea = br.readLine()) != null) {
+            while ((linea = br.readLine()) != null)
                 filas.add(linea.toCharArray());
-            }
 
             char[][] diseno = new char[filas.size()][];
             filas.toArray(diseno);
@@ -47,62 +47,58 @@ public class Nivel {
 
                     switch (ch) {
                         case 'P' -> pacman = new PacMan(posicion);
-
-                        case 'r' -> { // Fantasma Rojo
+                        case 'r' -> {
                             if (categoria == CategoriaJuego.MULTIJUGADOR) {
                                 fantasmas.add(new FantasmaJugador(posicion, cargarImagen("redGhost.png"), 2.0));
                             } else {
                                 fantasmas.add(new FantasmaRojo(posicion, cargarImagen("redGhost.png"), 2.0, laberinto));
                             }
                         }
-                        case 'p' -> { // Fantasma Rosa
+                        case 'p' ->
                             fantasmas.add(new FantasmaRosa(posicion, cargarImagen("pinkGhost.png"), 2.0, laberinto));
-                        }
-
-                        case 'b' -> { // Fantasma Azul
+                        case 'b' -> {
                             if (categoria != CategoriaJuego.MULTIJUGADOR) {
                                 fantasmas
                                         .add(new FantasmaAzul(posicion, cargarImagen("blueGhost.png"), 2.0, laberinto));
                             }
                         }
-                        case 'o' -> { // Fantasma Naranja
+                        case 'o' -> {
                             if (categoria != CategoriaJuego.MULTIJUGADOR) {
                                 fantasmas.add(
                                         new FantasmaNaranja(posicion, cargarImagen("orangeGhost.png"), 2.0, laberinto));
                             }
                         }
 
-                        case 'f' -> {
-                            if (laberinto.getDiseno()[f][c] != 'X') { // Solo en espacios libres
-                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood.png"), 
-                                        TipoPowerUp.INVENCIBILIDAD, 5000));
+                        // --- Lógica de Power-Ups ---
+                        case 'f' -> powerUps.add(
+                                new PowerUp(posicion, cargarImagen("powerFood.png"), TipoPowerUp.INVENCIBILIDAD, 5000));
+
+                        // Los nuevos Power-Ups SOLO se cargan si el modo es Mejorado.
+                        case 'v' -> { // Velocidad
+                            if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
+                                powerUps.add(
+                                        new PowerUp(posicion, cargarImagen("speed.png"), TipoPowerUp.VELOCIDAD, 3000));
                             }
                         }
-                        case 'v' -> {
-                            if (laberinto.getDiseno()[f][c] != 'X') {
-                                powerUps.add(new PowerUp(posicion, cargarImagen("velocidadPower.png"), 
-                                        TipoPowerUp.VELOCIDAD, 5000));
-                            }
-                        }
-                        case 'd' -> {
-                            if (laberinto.getDiseno()[f][c] != 'X' && categoria != CategoriaJuego.CLASICO) {
-                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood2.png"), 
+                        case 'd' -> { // Doble Puntos
+                            if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
+                                powerUps.add(new PowerUp(posicion, cargarImagen("doublePoints.png"),
                                         TipoPowerUp.DOBLE_PUNTOS, 5000));
                             }
                         }
-                        case 'c' -> {
-                            if (laberinto.getDiseno()[f][c] != 'X' && categoria != CategoriaJuego.CLASICO) {
-                                powerUps.add(new PowerUp(posicion, cargarImagen("congelarPower.png"), 
-                                        TipoPowerUp.CONGELAR_ENEMIGOS, 5000));
+                        case 'c' -> { // Congelar
+                            if (categoria == CategoriaJuego.CLASICO_MEJORADO) {
+                                powerUps.add(new PowerUp(posicion, cargarImagen("freeze.png"),
+                                        TipoPowerUp.CONGELAR_ENEMIGOS, 3000));
                             }
                         }
+
                         case 'F' -> posicionAparicionFruta = posicion;
                         case '.', 'O' -> puntos.add(new Punto(posicion, 10));
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("❌ Error crítico cargando nivel desde archivo: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -119,7 +115,7 @@ public class Nivel {
             }
             return new ImageIcon(url).getImage();
         } catch (Exception e) {
-            System.err.println("❌ Error al cargar imagen '" + nombreArchivo + "': " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
