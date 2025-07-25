@@ -11,21 +11,21 @@ public class MenuPrincipal extends JPanel {
     public MenuPrincipal(ActionListener manejador) {
         setLayout(new GridBagLayout());
         setBackground(new Color(10, 10, 30)); // Fondo oscuro azulado
-        
+
         // Panel central con efecto de vidrio
         JPanel centerPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g;
-                
+
                 // Fondo semi-transparente
                 g2d.setColor(new Color(20, 20, 40, 200));
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
-                
+
                 // Borde neon
                 g2d.setStroke(new BasicStroke(3));
                 g2d.setColor(new Color(0, 200, 255, 100));
-                g2d.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 30, 30);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
             }
         };
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
@@ -37,17 +37,17 @@ public class MenuPrincipal extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g;
-                
+
                 // Efecto sombra neon
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, 
-                                   RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                 g2d.setFont(getFont());
-                
+
                 for (int i = 0; i < 5; i++) {
-                    g2d.setColor(new Color(0, 200, 255, 50 - i*10));
-                    g2d.drawString(getText(), i+1, i+1 + g2d.getFontMetrics().getAscent());
+                    g2d.setColor(new Color(0, 200, 255, 50 - i * 10));
+                    g2d.drawString(getText(), i + 1, i + 1 + g2d.getFontMetrics().getAscent());
                 }
-                
+
                 // Texto principal
                 g2d.setColor(Color.WHITE);
                 super.paintComponent(g2d);
@@ -56,14 +56,14 @@ public class MenuPrincipal extends JPanel {
         titulo.setFont(new Font("Arial Rounded MT Bold", Font.BOLD, 48));
         titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
         titulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0));
-        
+
         centerPanel.add(titulo);
 
         // ComboBox estilizado
-        comboCategorias = new JComboBox<>(new String[]{"CLÁSICO", "MEJORADO", "MULTIJUGADOR"});
+        comboCategorias = new JComboBox<>(new String[] { "CLÁSICO", "MEJORADO", "MULTIJUGADOR" });
         comboCategorias.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, 
+            public Component getListCellRendererComponent(JList<?> list, Object value,
                     int index, boolean isSelected, boolean cellHasFocus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(
                         list, value, index, isSelected, cellHasFocus);
@@ -80,7 +80,7 @@ public class MenuPrincipal extends JPanel {
         comboCategorias.setForeground(Color.WHITE);
         comboCategorias.setFont(new Font("Arial", Font.BOLD, 16));
         comboCategorias.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-        
+
         centerPanel.add(comboCategorias);
         centerPanel.add(Box.createVerticalStrut(40));
 
@@ -104,17 +104,17 @@ public class MenuPrincipal extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
-                
+
                 // Efecto hover
                 if (getModel().isRollover()) {
                     g2.setColor(baseColor.brighter());
                 } else {
                     g2.setColor(baseColor);
                 }
-                
+
                 // Fondo redondeado
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                
+
                 // Texto centrado
                 g2.setColor(Color.BLACK);
                 g2.setFont(new Font("Arial", Font.BOLD, 18));
@@ -123,27 +123,36 @@ public class MenuPrincipal extends JPanel {
                 int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
                 g2.drawString(text, x, y);
             }
-            
+
             @Override
             protected void paintBorder(Graphics g) {
                 // Sin borde
             }
         };
-        
+
         button.setContentAreaFilled(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 50, 10, 50));
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.addActionListener(listener);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        
+
         return button;
     }
 
-    // Getters 
-    public JButton getBtnJugar() { return btnJugar; }
-    public JButton getBtnInstrucciones() { return btnInstrucciones; }
-    public JButton getBtnSalir() { return btnSalir; }
-    public String getCategoriaSeleccionada() { 
-        return comboCategorias.getSelectedItem().toString(); 
+    // Getters
+    public JButton getBtnJugar() {
+        return btnJugar;
+    }
+
+    public JButton getBtnInstrucciones() {
+        return btnInstrucciones;
+    }
+
+    public JButton getBtnSalir() {
+        return btnSalir;
+    }
+
+    public String getCategoriaSeleccionada() {
+        return comboCategorias.getSelectedItem().toString();
     }
 }

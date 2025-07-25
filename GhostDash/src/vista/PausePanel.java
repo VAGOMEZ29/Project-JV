@@ -9,7 +9,7 @@ import java.awt.event.ActionListener;
 public class PausePanel extends JPanel {
     private static final Color BACKGROUND_COLOR = new Color(20, 20, 20, 220);
     private static final Color TEXT_COLOR = Color.YELLOW;
-    
+
     public PausePanel(GameManager gameManager, GameController gameController) {
         configurePanel();
         initMenu(gameManager, gameController);
@@ -25,21 +25,21 @@ public class PausePanel extends JPanel {
         menuContainer.setLayout(new BoxLayout(menuContainer, BoxLayout.Y_AXIS));
         menuContainer.setBackground(BACKGROUND_COLOR);
         menuContainer.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
-        
+
         menuContainer.add(createTitle());
         menuContainer.add(Box.createVerticalStrut(30));
-        
-        menuContainer.add(createButton("Reanudar", e -> gameManager.togglePause()));
+
+        menuContainer.add(createButton("Reanudar Juego", e -> gameManager.togglePause()));
         menuContainer.add(Box.createVerticalStrut(15));
-        
+
         menuContainer.add(createButton("Reiniciar Nivel", e -> {
             gameManager.togglePause();
             gameController.reiniciarNivel();
         }));
         menuContainer.add(Box.createVerticalStrut(15));
-        
+
         menuContainer.add(createButton("Salir al Menú", e -> gameManager.mostrarMenu()));
-        
+
         add(menuContainer);
     }
 

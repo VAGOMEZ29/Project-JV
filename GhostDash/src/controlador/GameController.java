@@ -255,7 +255,6 @@ public class GameController {
             }
         }.start();
     }
-
     // ================================================================================
     // SECCIÓN: GESTIÓN DE LA LÓGICA DE LA FRUTA
     // ================================================================================
@@ -383,6 +382,16 @@ public class GameController {
         gameManager.mostrarMenu();
     }
 
+    /**
+     * Reinicia el nivel actual a su estado inicial.
+     * Mantiene las vidas y la puntuación, pero resetea las posiciones y la fruta.
+     */
+    public void reiniciarNivel() {
+        // La lógica de reiniciar posiciones ya hace un "reinicio duro" que es
+        // perfecto para reiniciar el nivel desde cero.
+        reiniciarPosiciones();
+    }
+
     // ================================================================================
     // SECCIÓN: GESTIÓN DE LA IA
     // ================================================================================
@@ -447,4 +456,5 @@ public class GameController {
     public void setCategoria(CategoriaJuego categoria) {
         this.categoria = categoria;
     }
+
 }
