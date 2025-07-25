@@ -13,6 +13,7 @@ public abstract class Fantasma extends Personaje {
     private long tiempoInicioHuida;
     private long duracionHuida;
     private final double velocidadBase;
+    private boolean congelado = false;
 
     static {
         try {
@@ -32,6 +33,10 @@ public abstract class Fantasma extends Personaje {
     // En la clase Fantasma.java
     public void decidirSiguienteDireccion(PacMan pacman, List<Fantasma> fantasmas, Laberinto laberinto,
             ModoGlobalIA modoGlobal) {
+        // Si el fantasma está congelado, no se mueve.
+        if (congelado) {
+            return;
+        }
         Point posActual = this.getPosicion();
 
         // Solo tomar decisiones cuando esté perfectamente alineado en una celda.
@@ -187,9 +192,21 @@ public abstract class Fantasma extends Personaje {
     public double getVelocidadBase() {
         return this.velocidadBase;
     }
+    //Congelado 
+    public void setCongelado(boolean congelado) {
+        this.congelado = congelado;
+    }
+
+    public boolean estaCongelado() {
+        return congelado;
+    }
 
     @Override
     public void mover(Direccion direccion) {
+        // Si el fantasma está congelado, no se mueve.
+        if (congelado) {
+            return;
+        }
         int paso = 32;
         this.direccion = direccion;
         switch (direccion) {

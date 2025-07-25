@@ -72,14 +72,30 @@ public class Nivel {
                             }
                         }
 
-                        case 'f' -> powerUps.add(
-                                new PowerUp(posicion, cargarImagen("powerFood.png"), TipoPowerUp.INVENCIBILIDAD, 5000));
-                        case 'v' -> powerUps.add(
-                                new PowerUp(posicion, cargarImagen("velocidadPower.png"), TipoPowerUp.VELOCIDAD, 5000));
-                        case 'd' -> powerUps.add(
-                                new PowerUp(posicion, cargarImagen("powerFood2.png"), TipoPowerUp.DOBLE_PUNTOS, 5000));
-                        case 'c' -> powerUps.add(
-                                new PowerUp(posicion, cargarImagen("congelarPower.png"), TipoPowerUp.CONGELAR_ENEMIGOS, 5000));
+                        case 'f' -> {
+                            if (laberinto.getDiseno()[f][c] != 'X') { // Solo en espacios libres
+                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood.png"), 
+                                        TipoPowerUp.INVENCIBILIDAD, 5000));
+                            }
+                        }
+                        case 'v' -> {
+                            if (laberinto.getDiseno()[f][c] != 'X') {
+                                powerUps.add(new PowerUp(posicion, cargarImagen("velocidadPower.png"), 
+                                        TipoPowerUp.VELOCIDAD, 5000));
+                            }
+                        }
+                        case 'd' -> {
+                            if (laberinto.getDiseno()[f][c] != 'X' && categoria != CategoriaJuego.CLASICO) {
+                                powerUps.add(new PowerUp(posicion, cargarImagen("powerFood2.png"), 
+                                        TipoPowerUp.DOBLE_PUNTOS, 5000));
+                            }
+                        }
+                        case 'c' -> {
+                            if (laberinto.getDiseno()[f][c] != 'X' && categoria != CategoriaJuego.CLASICO) {
+                                powerUps.add(new PowerUp(posicion, cargarImagen("congelarPower.png"), 
+                                        TipoPowerUp.CONGELAR_ENEMIGOS, 5000));
+                            }
+                        }
                         case 'F' -> posicionAparicionFruta = posicion;
                         case '.', 'O' -> puntos.add(new Punto(posicion, 10));
                     }

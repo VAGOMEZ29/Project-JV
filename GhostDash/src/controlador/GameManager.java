@@ -35,6 +35,7 @@ public class GameManager {
             if (e.getSource() == menuPrincipal.getBtnJugar()) {
                 String categoriaStr = menuPrincipal.getCategoriaSeleccionada();
                 gameController = new GameController(this);
+                
                 if (categoriaStr.equalsIgnoreCase("Mejorado")) {
                     gameController.setCategoria(CategoriaJuego.CLASICO_MEJORADO);
                 } else if (categoriaStr.equalsIgnoreCase("Multijugador")) {
@@ -67,7 +68,6 @@ public class GameManager {
 
     public void iniciarJuego() {
         setEstado(GameState.JUGANDO);
-        gameController = new GameController(this);
         gamePanel = gameController.prepararJuego();
         pausePanel = new PausePanel(this, gameController);
         pausePanel.setVisible(false);
@@ -106,7 +106,6 @@ public class GameManager {
             setEstado(GameState.JUGANDO);
             pausePanel.setVisible(false);
 
-            // ¡LA LÍNEA QUE LO ARREGLA TODO!
             // Forzamos al GamePanel a recuperar el foco para que pueda escuchar el teclado
             // de nuevo.
             gamePanel.requestFocusInWindow();

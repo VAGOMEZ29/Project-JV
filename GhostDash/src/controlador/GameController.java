@@ -53,6 +53,8 @@ public class GameController {
     private final GameManager gameManager;
     private final SoundManager soundManager = new SoundManager();
 
+    //Variables para el doble Puntos
+    private boolean doblePuntosActivo= false;
     /**
      * Constructor de la clase.
      * 
@@ -205,7 +207,7 @@ public class GameController {
         }
         puntos.removeIf(p -> {
             if (pacman.getPosicion().equals(p.getPosicion())) {
-                puntuacion += 10;
+                puntuacion += doblePuntosActivo ? 20:10;
                 puntosComidosEnNivel++;
                 soundManager.reproducirComer();
                 return true;
@@ -239,12 +241,16 @@ public class GameController {
     }
 
     /**
-     * Activa el efecto de un Power-Up, como la invencibilidad.
+     * Activa el efecto de un Power-Up según el tipo y el modo de juego actual
      * 
      * @param tipo     El tipo de efecto a activar.
      * @param duracion La duración del efecto en milisegundos.
      */
     private void activarEfecto(TipoPowerUp tipo, int duracion) {
+        // Si el modo de juego es CLÁSICO, solo permitimos  INVENCIBILIDAD Y VELOCIDAD
+        if (categoria == CategoriaJuego.CLASICO) {
+            if (tipo != TipoPowerUp.INVENCIBILIDAD && tipo != TipoPowerUp.VELOCIDAD) return;
+        } 
         switch (tipo) {
             case INVENCIBILIDAD:
                 pacmanInvencible = true;
@@ -264,26 +270,35 @@ public class GameController {
                 break;
 
             case CONGELAR_ENEMIGOS:
-                for (Fantasma fantasma : fantasmas) {
-                    fantasma.setCongelado(true);
-                }
-                new Timer(duracion, e -> {
+                if(categoria == CategoriaJuego.CLASICO_MEJORADO){ 
                     for (Fantasma fantasma : fantasmas) {
-                        fantasma.setCongelado(false);
+                        fantasma.setCongelado(true);
                     }
-                }) {{
-                    setRepeats(false);
-                }}.start();
-                break;
+                    new Timer(duracion, e -> {
+                        for (Fantasma fantasma : fantasmas) {
+                            fantasma.setCongelado(false);
+                        }
+                    }) {{
+                        setRepeats(false);
+                    }}.start();
+                }
+                    break;
 
             case DOBLE_PUNTOS:
-                // podrías usar una variable `doblePuntos = true;` que modificas en procesarInteracciones()
-                activarDoblePuntos(duracion);
+                if(categoria==CategoriaJuego.CLASICO_MEJORADO){
+                    doblePuntosActivo = true;
+                    new Timer(duracion, e -> doblePuntosActivo = false) {{
+                        setRepeats(false);
+                    }}.start();
+                }
+                break;
+            default:
                 break;
         }
 
         soundManager.reproducirEfecto("pacman_powerUp.wav");
     }
+
 
     // ================================================================================
     // SECCIÓN: GESTIÓN DE LA LÓGICA DE LA FRUTA
@@ -323,6 +338,7 @@ public class GameController {
     // ================================================================================
 
     public GamePanel prepararJuego() {
+        System.out.println("Categoria actual" + categoria); //debug
         nivelActual = 1;
         puntuacion = 0;
         vidas = 3;
@@ -485,6 +501,5 @@ public class GameController {
 
     public void setCategoria(CategoriaJuego categoria) {
         this.categoria = categoria;
-    }
-
+    } 
 }

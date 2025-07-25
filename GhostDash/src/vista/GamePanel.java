@@ -31,6 +31,8 @@ public class GamePanel extends JPanel {
     private CategoriaJuego categoria; // Campo para saber en qué modo estamos
     private FantasmaJugador fantasmaJugador;
 
+    private List<String> efectosActivos = List.of();
+
     public GamePanel(Laberinto laberinto, PacMan pacman, List<Fantasma> fantasmas,
             List<Fruta> frutas, List<Punto> puntos, List<PowerUp> powerUps, CategoriaJuego categoria) { // <-- Parámetro
                                                                                                         // añadido
@@ -171,6 +173,9 @@ public class GamePanel extends JPanel {
     public void setLaberinto(Laberinto l) {
         this.laberinto = l;
     }
+    public void setEfectosActivos(List<String> efectos) {
+        this.efectosActivos = efectos;
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -221,6 +226,13 @@ public class GamePanel extends JPanel {
             else {
                 g.drawString("Puntuación: " + puntuacion, 20, laberinto.getFilas() * 32 + 25);
                 g.drawString("Vidas: " + vidas, getWidth() - 100, laberinto.getFilas() * 32 + 25);
+            }
+            if (categoria == CategoriaJuego.CLASICO && efectosActivos != null && !efectosActivos.isEmpty()) {
+                g.setFont(new Font("Arial", Font.PLAIN, 14));
+                g.setColor(Color.CYAN);
+                int y = laberinto.getFilas() * 32 + 20;
+                int x= getWidth() /2 - 200;
+                g.drawString("Efectos Activos: " + String.join(", ", efectosActivos), x, y);
             }
         }
 
